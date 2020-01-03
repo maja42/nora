@@ -1,0 +1,55 @@
+package shapes
+
+import (
+	"github.com/maja42/gl"
+	"github.com/maja42/nora"
+	"github.com/maja42/nora/builtin/shader"
+)
+
+type Sprite struct {
+	nora.AttachableModel
+	nora.Transform
+	mesh nora.Mesh
+
+	sum float64
+}
+
+func NewSprite() *Sprite {
+	mat := nora.NewMaterial(shader.TEX_2D)
+
+	s := &Sprite{
+		mesh: *nora.NewMesh(mat),
+	}
+	s.Clear()
+
+	/* counter-clockwise
+	   3 - 2
+	   | / |
+	   0 - 1
+	*/
+
+	vertices := []float32{
+		/*xyz*/ 0, 0 /*uv*/, 0, 0, // 0
+		/*xyz*/ 1, 0 /*uv*/, 1, 0, // 1
+		/*xyz*/ 1, 1 /*uv*/, 1, 1, // 2
+
+		/*xyz*/ 1, 1 /*uv*/, 1, 1, // 2
+		/*xyz*/ 0, 1 /*uv*/, 0, 1, // 3
+		/*xyz*/ 0, 0 /*uv*/, 0, 0, // 0
+	}
+	s.mesh.SetVertexData(vertices, nil, gl.TRIANGLES, []string{"position", "texCoord"}, nora.InterleavedBuffer)
+	return s
+}
+
+func (m *Sprite) SetTexture(texKey nora.TextureKey) {
+	m.mesh.Material().AddTextureBinding("sampler", texKey)
+}
+
+func (m *Sprite) Destroy() {
+	m.mesh.Destroy()
+}
+
+func (m *Sprite) Draw(renderState *nora.RenderState) {
+	renderState.TransformStack.RightMul(m.GetTransform())
+	m.mesh.Draw(renderState)
+}
