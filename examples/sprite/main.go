@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/maja42/gl"
+	"github.com/maja42/glfw"
 	"github.com/maja42/nora"
 	"github.com/maja42/nora/builtin/shader"
 	"github.com/maja42/nora/builtin/shapes"
@@ -45,6 +46,10 @@ func run() error {
 	sprite.SetTexture("sheep")
 	sprite.MoveXY(-0.5, -0.5)
 	n.Scene.Attach(sprite)
+
+	n.Interactives.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
+		n.Stop()
+	})
 
 	return nil
 }

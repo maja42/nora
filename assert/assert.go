@@ -2,7 +2,6 @@ package assert
 
 import (
 	"fmt"
-
 	"github.com/maja42/gl"
 	"github.com/sirupsen/logrus"
 )
@@ -11,6 +10,10 @@ func True(t bool, format string, args ...interface{}) bool {
 	if !t {
 		logrus.Errorf(format, args...)
 	}
+	return t
+}
+func False(t bool, format string, args ...interface{}) bool {
+	True(!t, format, args...)
 	return t
 }
 

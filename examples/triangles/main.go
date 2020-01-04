@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/maja42/glfw"
 	gomath "math"
 	"math/rand"
 	"time"
@@ -71,5 +72,10 @@ func run() error {
 			}
 		})
 	})
+
+	n.Interactives.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
+		n.Stop()
+	})
+
 	return nil
 }

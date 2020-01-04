@@ -2,10 +2,10 @@ package nora
 
 import (
 	"fmt"
+	"github.com/go-gl/mathgl/mgl32"
 	"sync"
 	"time"
 
-	"github.com/go-gl/mathgl/mgl32"
 	"github.com/maja42/gl"
 	"github.com/maja42/gl/render"
 	"github.com/maja42/glfw"
@@ -32,13 +32,14 @@ type Nora struct {
 	renderer       renderer
 	samplerManager samplerManager
 
-	Camera   Camera
-	Shaders  ShaderStore
-	Textures TextureStore
-	Scene    Scene
-	Jobs     JobSystem
+	Camera       Camera
+	Shaders      ShaderStore
+	Textures     TextureStore
+	Scene        Scene
+	Jobs         JobSystem
+	Interactives InteractionSystem
 
-	cursorPos mgl32.Vec2
+	//cursorPos mgl32.Vec2
 }
 
 var initLock sync.Mutex
@@ -110,6 +111,8 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 	logrus.Infof("Monitor:        %d x %d @ %dHz (%s)", vidmode.Width, vidmode.Height, vidmode.RefreshRate, monitor.GetName())
 	logrus.Infof("Window size:    %v\n", windowSize)
 
+	cursorX, cursorY := window.GetCursorPos()
+
 	running := make(chan struct{})
 	nora = &Nora{
 		window:             window,
@@ -124,21 +127,21 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 
 		renderer: newRenderer(),
 
-		Camera:   NewOrthoCamera(),
-		Shaders:  newShaderStore(),
-		Textures: newTextureStore(),
-		Jobs:     newJobSystem(),
-
-		cursorPos: mgl32.Vec2{float32(windowSize[0]) / 2, float32(windowSize[1]) / 2},
+		Camera:       NewOrthoCamera(),
+		Shaders:      newShaderStore(),
+		Textures:     newTextureStore(),
+		Jobs:         newJobSystem(),
+		Interactives: newInteractionSystem(mgl32.Vec2{float32(cursorX), float32(cursorY)}),
 	}
 	nora.Scene = newScene(&nora.Jobs)
 	nora.samplerManager = newSamplerManager(&nora.Textures)
 
 	nora.Camera.(*OrthoCamera).SetAspectRatio(nora.desiredAspectRatio, nora.desiredAspectRatio > 1)
 
-	window.SetCursorPosCallback(nora.cursorPosCallback)
-	window.SetKeyCallback(nora.keyCallback)
 	window.SetFramebufferSizeCallback(nora.resizeCallback)
+	window.SetCursorPosCallback(nora.Interactives.cursorPosCallback)
+	window.SetMouseButtonCallback(nora.Interactives.mouseButtonCallback)
+	window.SetKeyCallback(nora.Interactives.keyCallback)
 
 	var framebufferSize math.Vec2i
 	framebufferSize[0], framebufferSize[1] = window.GetFramebufferSize()
@@ -155,6 +158,7 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 
 func (n *Nora) cleanup() {
 	n.Jobs.RemoveAll()
+	n.Interactives.RemoveAll()
 	n.Shaders.UnloadAll()
 	n.Textures.UnloadAll()
 	n.Scene.DetachAndDestroyAll()
@@ -171,30 +175,8 @@ func (n *Nora) Wait() {
 	<-n.running
 }
 
-func (n *Nora) resizeCallback(w *glfw.Window, width, height int) {
+func (n *Nora) resizeCallback(_ *glfw.Window, _, _ int) {
 	n.windowResized = true
-}
-
-func (n *Nora) cursorPosCallback(_ *glfw.Window, x, y float64) {
-	n.cursorPos[0], n.cursorPos[1] = float32(x), float32(y)
-}
-
-func (n *Nora) keyCallback(_ *glfw.Window, key glfw.Key, _ int, action glfw.Action, mods glfw.ModifierKey) {
-	actionStr := "unknown"
-	switch action {
-	case glfw.Release:
-		actionStr = "release"
-	case glfw.Repeat:
-		actionStr = "repeat"
-	case glfw.Press:
-		actionStr = "press"
-	}
-	logrus.Debugf("Key input: %v (0x%X): %v", key, mods, actionStr)
-
-	if key == glfw.KeyEscape && action == glfw.Release {
-		logrus.Info("ESC: exiting")
-		n.Stop()
-	}
 }
 
 func (n *Nora) renderFrame() {
@@ -234,6 +216,9 @@ func (n *Nora) handleResize() {
 	case ResizeAdjustViewport:
 		gl.Viewport(0, 0, width, height)
 
+	case ResizeKeepViewport:
+		// do nothing
+		
 	case ResizeKeepAspectRatio:
 		gl.Viewport(0, 0, width, height)
 
@@ -274,10 +259,6 @@ func (n *Nora) Window() *glfw.Window {
 // Should usually not be required/accessed by the user.
 func (n *Nora) RenderThread() *render.RenderThread {
 	return renderThread
-}
-
-func (n *Nora) Cursor() mgl32.Vec2 {
-	return n.cursorPos
 }
 
 func (n *Nora) SetClearColor(color color.Color) {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/maja42/glfw"
 	"math/rand"
 	"time"
 
@@ -56,5 +57,10 @@ func run() error {
 		r := runes[rand.Intn(len(runes))]
 		term.SetRune(pos, r)
 	})
+
+	n.Interactives.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
+		n.Stop()
+	})
+
 	return nil
 }

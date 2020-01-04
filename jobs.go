@@ -7,12 +7,15 @@ import (
 	"go.uber.org/atomic"
 )
 
+// JobID uniquely represents an update job.
 type JobID struct {
 	uint64
 }
 
+// Update jobs are called right before rendering
 type UpdateJob func(elapsed time.Duration)
 
+// JobSystem manages update jobs that are called before rendering, typically each frame.
 type JobSystem struct {
 	m          sync.Mutex
 	idSeq      atomic.Uint64

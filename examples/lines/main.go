@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/go-gl/mathgl/mgl32"
+	"github.com/maja42/glfw"
 	"github.com/maja42/nora"
 	"github.com/maja42/nora/builtin/shader"
 	"github.com/maja42/nora/builtin/shapes"
@@ -70,6 +71,10 @@ func run() error {
 		{-0.122, 0.85},
 		{0.32, 0.45},
 	}...)
+
+	n.Interactives.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
+		n.Stop()
+	})
 
 	return nil
 }
