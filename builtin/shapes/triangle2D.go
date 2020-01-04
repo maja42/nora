@@ -23,11 +23,11 @@ func NewTriangle2D() *Triangle2D {
 	s.Clear()
 
 	vertices := []float32{
-		/*xyz*/ 0, 0,
-		/*xyz*/ 1, 0,
-		/*xyz*/ 1, 1,
+		/*xy*/ 0, 0,
+		/*xy*/ 1, 0,
+		/*xy*/ 1, 1,
 	}
-	s.mesh.SetVertexData(vertices, nil, gl.TRIANGLES, []string{"position"}, nora.InterleavedBuffer)
+	s.mesh.SetVertexData(3, vertices, nil, gl.TRIANGLES, []string{"position"}, nora.InterleavedBuffer)
 	return s
 }
 

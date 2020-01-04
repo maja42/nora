@@ -73,7 +73,7 @@ func NewTerminal(font *nora.Font, size math.Vec2i, lineSpacing float32) *Termina
 
 	t.text = make([]rune, characters)
 
-	t.mesh.SetVertexData(vertices, indices, gl.TRIANGLES, []string{"position", "texCoord"}, nora.InterleavedBuffer)
+	t.mesh.SetVertexData(vertexCnt, vertices, indices, gl.TRIANGLES, []string{"position", "texCoord"}, nora.InterleavedBuffer)
 	return t
 }
 

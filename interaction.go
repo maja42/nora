@@ -125,9 +125,9 @@ func (i *InteractionSystem) RemoveAll() {
 	i.mouseButtonEventFuncs = make(map[InterID]OnMouseButtonEventFunc)
 }
 
-// Cursor returns the current cursor position.
+// MousePos returns the current cursor position.
 // TODO: return in other coordinate systems!
-func (i *InteractionSystem) Cursor() mgl32.Vec2 {
+func (i *InteractionSystem) MousePos() mgl32.Vec2 {
 	return i.cursorPos
 }
 

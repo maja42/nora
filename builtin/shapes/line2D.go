@@ -145,7 +145,7 @@ func (m *Line2D) updateBevel() {
 		})
 	}
 
-	m.mesh.SetVertexData(vertices, nil, gl.TRIANGLE_STRIP, []string{"position"}, nora.CompactBuffer)
+	m.mesh.SetVertexData(vertexCount, vertices, nil, gl.TRIANGLE_STRIP, []string{"position"}, nora.CompactBuffer)
 }
 
 func (m *Line2D) updateMiter() {
@@ -203,7 +203,7 @@ func (m *Line2D) updateMiter() {
 			vertices[2], vertices[3],
 		})
 	}
-	m.mesh.SetVertexData(vertices, nil, gl.TRIANGLE_STRIP, []string{"position"}, nora.CompactBuffer)
+	m.mesh.SetVertexData(vertexCount, vertices, nil, gl.TRIANGLE_STRIP, []string{"position"}, nora.CompactBuffer)
 }
 
 func computeNormal(from, to mgl32.Vec2) mgl32.Vec2 {

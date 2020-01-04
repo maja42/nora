@@ -37,7 +37,7 @@ func NewSprite() *Sprite {
 		/*xy*/ 0, 1 /*uv*/, 0, 1, // 3
 		/*xy*/ 0, 0 /*uv*/, 0, 0, // 0
 	}
-	s.mesh.SetVertexData(vertices, nil, gl.TRIANGLES, []string{"position", "texCoord"}, nora.InterleavedBuffer)
+	s.mesh.SetVertexData(6, vertices, nil, gl.TRIANGLES, []string{"position", "texCoord"}, nora.InterleavedBuffer)
 	return s
 }
 

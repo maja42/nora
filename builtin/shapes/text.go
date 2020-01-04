@@ -113,8 +113,15 @@ func (m *Text) update() {
 	vertices = vertices[:vtx*4]
 	indices = indices[:idx]
 
-	m.mesh.SetVertexData(vertices, indices, gl.TRIANGLES, []string{"position", "texCoord"}, nora.InterleavedBuffer)
+	vertexCount := int(vtx)
+
+	m.mesh.SetVertexData(vertexCount, vertices, indices, gl.TRIANGLES, []string{"position", "texCoord"}, nora.InterleavedBuffer)
 	m.bounds = mgl32.Vec2{origin, -baseline + float32(f.Height)}
+}
+
+func (m *Text) Set(text string) {
+	m.text = []rune(text)
+	m.update()
 }
 
 func (m *Text) SetTabWidth(tabWidth int) {

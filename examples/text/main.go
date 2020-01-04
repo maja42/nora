@@ -11,6 +11,9 @@ import (
 )
 
 func main() {
+	logrus.SetFormatter(&logrus.TextFormatter{
+		ForceColors: true,
+	})
 	err := run()
 	if err != nil {
 		logrus.Fatalln(err)

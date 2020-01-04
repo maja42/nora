@@ -25,7 +25,6 @@ type Mesh struct {
 
 	vertexAttributes []string
 
-	vtxShaderProgID sProgID // shader program for which vertex information was calculated
 	vertexSize      int     // in bytes
 	vertexCount     int
 
@@ -58,29 +57,31 @@ func (m *Mesh) SetMaterial(mat *Material) {
 	m.material = mat
 }
 
-// SetVertexData defines the mesh's geometry.
+// SetVertexData is equivalent to SetGeometry and defines the mesh's geometry.
+//	- vertexCount       Number of vertices
 //	- vertices			Array of raw vertex data
 //	- indices 			Optional array of indices. If provided, indexed drawing is performed instead of array drawing.
 //	- primitiveType 	The type of primitives that is drawn.
 //  - vertexAttributes 	The (ordered) set of attributes within the vertices.
 //  - bufferLayout      How vertices are laid out within the vertex array.
-func (m *Mesh) SetVertexData(vertices []float32, indices []uint16, primitiveType PrimitiveType, vertexAttributes []string, bufferLayout BufferLayout) {
-	m.vtxShaderProgID = sProgID{} // outdated
-	if indices == nil {
+func (m *Mesh) SetVertexData(vertexCount int, vertices []float32, indices []uint16, primitiveType PrimitiveType, vertexAttributes []string, bufferLayout BufferLayout) {
+	//m.vtxShaderProgID = sProgID{} // outdated
+	if len(indices) == 0 {
 		m.prepareIBO(false)
 		m.indexCount = len(vertices)
 	} else {
 		m.prepareIBO(true)
 		m.indexCount = len(indices)
 	}
-
+	m.vertexCount = vertexCount
+	m.vertexSize = (len(vertices) / vertexCount) * 4
 	m.primitiveType = primitiveType
 	m.bufferLayout = bufferLayout
 	m.vboSize = len(vertices) * 4
 	m.vertexAttributes = vertexAttributes
-
-	m.calcVertexData()
 	m.primitiveCount = m.determinePrimitiveCount(m.indexCount, primitiveType)
+
+	AssertValidGeometry(m.material.sProgKey, vertexCount, vertices, indices, primitiveType, vertexAttributes)
 
 	usage := gl.Enum(gl.STATIC_DRAW)
 
@@ -89,12 +90,17 @@ func (m *Mesh) SetVertexData(vertices []float32, indices []uint16, primitiveType
 	gl.BufferDataFloat32(gl.ARRAY_BUFFER, vertices, usage)
 	nora.unlockBuffer(gl.ARRAY_BUFFER)
 
-	if indices != nil {
+	if len(indices) > 0 {
 		nora.lockBuffer(gl.ELEMENT_ARRAY_BUFFER)
 		gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.ibo)
 		gl.BufferDataUint16(gl.ELEMENT_ARRAY_BUFFER, indices, usage)
 		nora.unlockBuffer(gl.ELEMENT_ARRAY_BUFFER)
 	}
+}
+
+// SetGeometry is equivalent to SetVertexData and defines the mesh's geometry.
+func (m *Mesh) SetGeometry(geom *Geometry) {
+	m.SetVertexData(geom.vertexCount, geom.vertices, geom.indices, geom.primitiveType, geom.vertexAttributes, geom.bufferLayout)
 }
 
 func (m *Mesh) prepareIBO(required bool) {
@@ -106,37 +112,6 @@ func (m *Mesh) prepareIBO(required bool) {
 		gl.DeleteBuffer(m.ibo)
 		m.ibo.Value = 0
 	}
-}
-
-func (m *Mesh) calcVertexData() {
-	sProg, id := nora.Shaders.resolve(m.material.sProgKey)
-
-	if !assert.True(sProg != nil, "Shader %q not loaded", m.material.sProgKey) {
-		return
-	}
-	if id == m.vtxShaderProgID { // already up-to-date
-		return
-	}
-	m.vtxShaderProgID = id
-
-	components := 0
-	for _, vaName := range m.vertexAttributes {
-		_, typ := sProg.getAttribLocation(vaName)
-		assert.True(typ != 0, "Attribute %q is not supported by shader %q", vaName, sProg)
-
-		components += int(vaTypePropertyMapping[typ].components)
-	}
-
-	m.vertexSize = components * 4
-	if m.vboSize == 0 {
-		m.vertexCount = 0
-	} else {
-		assert.True(m.vertexSize > 0, "Corrupt vertex data (no attributes)")
-		m.vertexCount = m.vboSize / m.vertexSize
-	}
-
-	// can happen if the vertex attribute type expected by the shader does not match the assumptions of the caller:
-	assert.True(m.vertexCount*m.vertexSize == m.vboSize, "Invalid vertex data: size does not match vertex attribute expectations")
 }
 
 func (m *Mesh) determinePrimitiveCount(indexCount int, primitiveType PrimitiveType) int {
@@ -172,7 +147,6 @@ func (m *Mesh) determinePrimitiveCount(indexCount int, primitiveType PrimitiveTy
 //  - vertices			Underlying vertex data that will overwrite existing buffers
 // Cannot change the underlying vertex buffer size.
 func (m *Mesh) SetVertexSubData(vertexOffset int, vertices []float32) {
-	m.calcVertexData()
 	assert.True(vertexOffset >= 0 && vertexOffset < m.vertexCount, "Invalid vertex offset (out of range)")
 	assert.True((len(vertices)*4)%(m.vertexSize) == 0, "Invalid vertex data size")
 
@@ -187,9 +161,10 @@ func (m *Mesh) SetVertexSubData(vertexOffset int, vertices []float32) {
 //  - indices			Underlying index data that will overwrite existing buffers
 // Cannot change the underlying index buffer size.
 func (m *Mesh) SetIndexSubData(indexOffset int, indices []uint16) {
-	m.calcVertexData()
 	assert.True(m.ibo.Value != 0, "The mesh does not use indexed drawing")
 	assert.True(indexOffset >= 0 && indexOffset < m.indexCount, "Invalid index offset (out of range)")
+
+	// TODO: write assertion that checks that indices don't reference out-of-bounds vertices
 
 	nora.glSync.lockBuffer(gl.ELEMENT_ARRAY_BUFFER)
 	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.ibo)
@@ -200,7 +175,7 @@ func (m *Mesh) SetIndexSubData(indexOffset int, indices []uint16) {
 // ClearVertexData clears the underlying buffers.
 // Rendering this mesh will not draw anything.
 func (m *Mesh) ClearVertexData() {
-	m.SetVertexData([]float32{}, nil, gl.TRIANGLES, []string{}, InterleavedBuffer)
+	m.SetVertexData(0, []float32{}, nil, gl.TRIANGLES, []string{}, InterleavedBuffer)
 }
 
 // draw must only be called during sync. rendering (no context lock)
@@ -215,9 +190,9 @@ func (m *Mesh) Draw(renderState *RenderState) {
 		return
 	}
 
-	if renderState.sProgID != m.vtxShaderProgID {
-		m.calcVertexData()
-	}
+	//if renderState.sProgID != m.vtxShaderProgID {
+	//	m.calcVertexData()
+	//}
 
 	sProg.configureVertexAttributes(m.vertexAttributes, true)
 	defer sProg.configureVertexAttributes(m.vertexAttributes, false)
