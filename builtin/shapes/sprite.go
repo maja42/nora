@@ -29,13 +29,13 @@ func NewSprite() *Sprite {
 	*/
 
 	vertices := []float32{
-		/*xyz*/ 0, 0 /*uv*/, 0, 0, // 0
-		/*xyz*/ 1, 0 /*uv*/, 1, 0, // 1
-		/*xyz*/ 1, 1 /*uv*/, 1, 1, // 2
+		/*xy*/ 0, 0 /*uv*/, 0, 0, // 0
+		/*xy*/ 1, 0 /*uv*/, 1, 0, // 1
+		/*xy*/ 1, 1 /*uv*/, 1, 1, // 2
 
-		/*xyz*/ 1, 1 /*uv*/, 1, 1, // 2
-		/*xyz*/ 0, 1 /*uv*/, 0, 1, // 3
-		/*xyz*/ 0, 0 /*uv*/, 0, 0, // 0
+		/*xy*/ 1, 1 /*uv*/, 1, 1, // 2
+		/*xy*/ 0, 1 /*uv*/, 0, 1, // 3
+		/*xy*/ 0, 0 /*uv*/, 0, 0, // 0
 	}
 	s.mesh.SetVertexData(vertices, nil, gl.TRIANGLES, []string{"position", "texCoord"}, nora.InterleavedBuffer)
 	return s

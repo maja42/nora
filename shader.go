@@ -150,7 +150,9 @@ func (p *shaderProgram) fetchVertexAttributes() {
 
 	for idx := uint32(0); idx < attributeCount; idx++ {
 		name, _, typ := gl.GetActiveAttrib(p.program, idx)
-		p.attributeLocations[name] = gl.Attrib{Value: uint(idx)}
+		loc := gl.GetAttribLocation(p.program, name)
+
+		p.attributeLocations[name] = loc
 		p.attributeTypes[name] = typ
 	}
 }

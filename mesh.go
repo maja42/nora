@@ -232,8 +232,11 @@ func (m *Mesh) Draw(renderState *RenderState) {
 	}
 
 	if m.ibo.Value != 0 {
-		// TODO: Don't I need to bind the element array buffer??
+		// TODO: Don't I need to bind the element array buffer?? The code wasn't there, and it seems to work without...
+		//nora.glSync.lockBuffer(gl.ELEMENT_ARRAY_BUFFER)
+		//gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.vbo)
 		gl.DrawElements(gl.Enum(m.primitiveType), m.indexCount, gl.UNSIGNED_SHORT, 0)
+		//nora.glSync.unlockBuffer(gl.ELEMENT_ARRAY_BUFFER)
 	} else {
 		gl.DrawArrays(gl.Enum(m.primitiveType), 0, m.indexCount)
 	}

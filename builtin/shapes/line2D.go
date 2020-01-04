@@ -86,7 +86,7 @@ func (m *Line2D) Color() color.Color {
 // SetColor changes the line color.
 func (m *Line2D) SetColor(c color.Color) {
 	m.color = c
-	m.mesh.Material().Uniform4f("fragColor", c.R, c.G, c.B, c.A)
+	m.mesh.Material().Uniform4fColor("fragColor", c)
 }
 
 func (m *Line2D) Update(elapsed time.Duration) {
