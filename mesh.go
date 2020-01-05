@@ -65,7 +65,6 @@ func (m *Mesh) SetMaterial(mat *Material) {
 //  - vertexAttributes 	The (ordered) set of attributes within the vertices.
 //  - bufferLayout      How vertices are laid out within the vertex array.
 func (m *Mesh) SetVertexData(vertexCount int, vertices []float32, indices []uint16, primitiveType PrimitiveType, vertexAttributes []string, bufferLayout BufferLayout) {
-	//m.vtxShaderProgID = sProgID{} // outdated
 	if len(indices) == 0 {
 		m.prepareIBO(false)
 		m.indexCount = len(vertices)
@@ -190,10 +189,6 @@ func (m *Mesh) Draw(renderState *RenderState) {
 		return
 	}
 
-	//if renderState.sProgID != m.vtxShaderProgID {
-	//	m.calcVertexData()
-	//}
-
 	sProg.configureVertexAttributes(m.vertexAttributes, true)
 	defer sProg.configureVertexAttributes(m.vertexAttributes, false)
 
@@ -207,11 +202,10 @@ func (m *Mesh) Draw(renderState *RenderState) {
 	}
 
 	if m.ibo.Value != 0 {
-		// TODO: Don't I need to bind the element array buffer?? The code wasn't there, and it seems to work without...
-		//nora.glSync.lockBuffer(gl.ELEMENT_ARRAY_BUFFER)
-		//gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.vbo)
+		nora.glSync.lockBuffer(gl.ELEMENT_ARRAY_BUFFER)
+		gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.ibo)
 		gl.DrawElements(gl.Enum(m.primitiveType), m.indexCount, gl.UNSIGNED_SHORT, 0)
-		//nora.glSync.unlockBuffer(gl.ELEMENT_ARRAY_BUFFER)
+		nora.glSync.unlockBuffer(gl.ELEMENT_ARRAY_BUFFER)
 	} else {
 		gl.DrawArrays(gl.Enum(m.primitiveType), 0, m.indexCount)
 	}
