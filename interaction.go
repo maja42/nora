@@ -4,6 +4,7 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/maja42/glfw"
 	"github.com/maja42/nora/assert"
+	"github.com/maja42/nora/math"
 	"go.uber.org/atomic"
 	"sync"
 )
@@ -13,7 +14,7 @@ type InterID struct {
 	uint64
 }
 
-type OnMouseMoveEventFunc func(pos, worldspace mgl32.Vec2)
+type OnMouseMoveEventFunc func(windowPos math.Vec2i, worldspace mgl32.Vec2)
 type OnMouseButtonEventFunc func(button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey)
 type OnKeyEventFunc func(key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey)
 
@@ -29,13 +30,13 @@ type InteractionSystem struct {
 	mouseButtonEventFuncs map[InterID]OnMouseButtonEventFunc
 	keyEventFuncs         map[InterID]OnKeyEventFunc
 	// state:
-	cursorPos           mgl32.Vec2
+	cursorPos           math.Vec2i // window coordinates
 	pressedMouseButtons map[glfw.MouseButton]struct{}
 	pressedKeys         map[glfw.Key]struct{}
 }
 
 // newInteractionSystem returns a new, empty interaction manager.
-func newInteractionSystem(currentCursorPos mgl32.Vec2) InteractionSystem {
+func newInteractionSystem(currentCursorPos math.Vec2i) InteractionSystem {
 	return InteractionSystem{
 		mouseMoveEventFuncs:   make(map[InterID]OnMouseMoveEventFunc),
 		mouseButtonEventFuncs: make(map[InterID]OnMouseButtonEventFunc),
@@ -125,9 +126,9 @@ func (i *InteractionSystem) RemoveAll() {
 	i.mouseButtonEventFuncs = make(map[InterID]OnMouseButtonEventFunc)
 }
 
-// MousePos returns the current cursor position.
-// TODO: return in other coordinate systems!
-func (i *InteractionSystem) MousePos() mgl32.Vec2 {
+// MousePos returns the current cursor position in window coordinates.
+// (0,0) = top left corner
+func (i *InteractionSystem) MousePos() math.Vec2i {
 	return i.cursorPos
 }
 
@@ -150,7 +151,7 @@ func (i *InteractionSystem) cursorPosCallback(_ *glfw.Window, x, y float64) {
 	// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
 	// TODO: run in parallel
 
-	i.cursorPos = mgl32.Vec2{float32(x), float32(y)}
+	i.cursorPos = math.Vec2i{int(x), int(y)}
 	for _, fn := range i.mouseMoveEventFuncs {
 		fn(i.cursorPos, mgl32.Vec2{}) // TODO: worldPos?
 	}

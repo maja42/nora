@@ -84,8 +84,13 @@ func equalStringSlice(a, b []string) bool {
 func AssertValidGeometry(sProgKey ShaderProgKey, vertexCount int, vertices []float32, indices []uint16, primitiveType PrimitiveType, vertexAttributes []string) {
 	// vertex data must be divisible by vertex count
 	indexCount := len(indices)
-	vertexSize := len(vertices) / vertexCount
-	assert.True(float32(len(vertices))/float32(vertexCount) == float32(vertexSize), "VertexCount and vertex data does not match")
+	vertexSize := 0
+	if vertexCount > 0 {
+		vertexSize = len(vertices) / vertexCount
+		assert.True(float32(len(vertices))/float32(vertexCount) == float32(vertexSize), "VertexCount and vertex data does not match")
+	} else {
+		assert.True(len(vertices) == 0, "VertexCount and vertex data does not match. Should there be vertices?")
+	}
 	// there must be attributes
 	assert.True(len(vertexAttributes) > 0, "There are no vertex attributes")
 	// vertex size must be big enough for all the attributes

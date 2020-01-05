@@ -49,7 +49,7 @@ func run() error {
 	}
 
 	txt := shapes.NewText(roboto, "Nora rendering engine")
-	txt.SetUniformScale(0.0008)
+	txt.SetUniformScale(0.1)
 	txt.MoveXY(-1.01, 0.775)
 	n.Scene.Attach(txt)
 
@@ -63,7 +63,7 @@ func run() error {
 		"\t - Make something nice with it\n"+
 		"\t - Buy new plant\n"+
 		"")
-	txt.SetUniformScale(0.0008)
+	txt.SetUniformScale(0.07)
 	txt.MoveXY(-1.01, 0.65)
 	n.Scene.Attach(txt)
 

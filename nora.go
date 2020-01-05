@@ -2,7 +2,6 @@ package nora
 
 import (
 	"fmt"
-	"github.com/go-gl/mathgl/mgl32"
 	"sync"
 	"time"
 
@@ -131,7 +130,7 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 		Shaders:      newShaderStore(),
 		Textures:     newTextureStore(),
 		Jobs:         newJobSystem(),
-		Interactives: newInteractionSystem(mgl32.Vec2{float32(cursorX), float32(cursorY)}),
+		Interactives: newInteractionSystem(math.Vec2i{int(cursorX), int(cursorY)}),
 	}
 	nora.Scene = newScene(&nora.Jobs)
 	nora.samplerManager = newSamplerManager(&nora.Textures)
@@ -218,7 +217,7 @@ func (n *Nora) handleResize() {
 
 	case ResizeKeepViewport:
 		// do nothing
-		
+
 	case ResizeKeepAspectRatio:
 		gl.Viewport(0, 0, width, height)
 

@@ -25,8 +25,8 @@ type Mesh struct {
 
 	vertexAttributes []string
 
-	vertexSize      int     // in bytes
 	vertexCount     int
+	vertexSize      int     // in bytes
 
 	indexCount     int
 	primitiveCount int
@@ -73,7 +73,9 @@ func (m *Mesh) SetVertexData(vertexCount int, vertices []float32, indices []uint
 		m.indexCount = len(indices)
 	}
 	m.vertexCount = vertexCount
-	m.vertexSize = (len(vertices) / vertexCount) * 4
+	if vertexCount > 0 {
+		m.vertexSize = (len(vertices) / vertexCount) * 4
+	}
 	m.primitiveType = primitiveType
 	m.bufferLayout = bufferLayout
 	m.vboSize = len(vertices) * 4
@@ -147,7 +149,7 @@ func (m *Mesh) determinePrimitiveCount(indexCount int, primitiveType PrimitiveTy
 // Cannot change the underlying vertex buffer size.
 func (m *Mesh) SetVertexSubData(vertexOffset int, vertices []float32) {
 	assert.True(vertexOffset >= 0 && vertexOffset < m.vertexCount, "Invalid vertex offset (out of range)")
-	assert.True((len(vertices)*4)%(m.vertexSize) == 0, "Invalid vertex data size")
+	assert.True(m.vertexSize > 0 && ((len(vertices)*4)%(m.vertexSize) == 0), "Invalid vertex data size")
 
 	nora.glSync.lockBuffer(gl.ARRAY_BUFFER)
 	gl.BindBuffer(gl.ARRAY_BUFFER, m.vbo)

@@ -15,7 +15,6 @@ type Font struct {
 	font.Font
 	texKey  TextureKey
 	texSize mgl32.Vec2
-	//tex *Texture
 }
 
 // LoadFont loads a font description and the corresponding texture.
@@ -72,6 +71,10 @@ func (f *Font) String() string {
 	return fmt.Sprintf("Font(%s/%s/%d)", f.Family, f.Style, f.Size)
 }
 
+func (f *Font) TextureKey() TextureKey {
+	return f.texKey
+}
+
 func (f *Font) Char(r rune) (font.Char, bool) {
 	char, ok := f.Chars[r]
 	return char, ok
@@ -90,6 +93,69 @@ func (f *Font) TexCoord(r rune) (mgl32.Vec2, mgl32.Vec2) {
 	return tl, br
 }
 
-func (f *Font) TextureKey() TextureKey {
-	return f.texKey
+// TextMetrics contains measurements of a piece of text.
+type TextMetrics struct {
+	// Total width of the text
+	Width int
+
+	// Distance between the origin and the right-most point of any rendered rune.
+	// Usually slightly less than width (the bounding box of the last rendered rune might not cover the whole character width).
+	ActualBBWidth int
+	// Distance between the baseline and the highest point of any rendered rune
+	ActualBBAscent int
+	// Distance between the baseline and the lowest point of any rendered rune
+	ActualBBDescent int
+
+	// Number of runes that can be rendered (no control characters or missing runes)
+	PrintableChars int
+	// If true, the text contains runes that don't exist in this font
+	MissingRunes bool
+}
+
+// MeasureText returns measurements of the given text.
+// New-Lines and unprintable characters are ignored.
+// Assumes a tab-width of 4 * average width.
+func (f *Font) MeasureText(text string) TextMetrics {
+	runes := []rune(text)
+
+	metrics := TextMetrics{}
+
+	lastCharBBWidthReduction := 0
+	for _, r := range runes {
+		if r == '\r' {
+			continue
+		}
+		if r == '\n' {
+			continue
+		}
+		if r == '\t' {
+			tabWidth := 4 * int(f.AvgWidth())
+			metrics.Width += tabWidth
+			lastCharBBWidthReduction = 0
+			continue
+		}
+
+		c, ok := f.Char(r)
+		if !ok {
+			metrics.MissingRunes = true
+			continue
+		}
+
+		bbWidth := c.Offset[0] + c.Size[0]
+		bbTop := c.Offset[1]
+		bbBottom := bbTop - c.Size[1]
+
+		lastCharBBWidthReduction = c.Width - bbWidth
+
+		metrics.PrintableChars++
+		metrics.Width += c.Width
+		if metrics.ActualBBAscent < bbTop {
+			metrics.ActualBBAscent = bbTop
+		}
+		if metrics.ActualBBDescent > bbBottom {
+			metrics.ActualBBDescent = bbBottom
+		}
+	}
+	metrics.ActualBBWidth = metrics.Width - lastCharBBWidthReduction
+	return metrics
 }
