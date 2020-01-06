@@ -9,8 +9,8 @@ import (
 	"sync"
 )
 
-// InterID uniquely represents an interactive component.
-type InterID struct {
+// CallbackID uniquely represents an interactive component.
+type CallbackID struct {
 	uint64
 }
 
@@ -26,9 +26,9 @@ type InteractionSystem struct {
 	m     sync.Mutex
 	idSeq atomic.Uint64
 	// listeners:
-	mouseMoveEventFuncs   map[InterID]OnMouseMoveEventFunc
-	mouseButtonEventFuncs map[InterID]OnMouseButtonEventFunc
-	keyEventFuncs         map[InterID]OnKeyEventFunc
+	mouseMoveEventFuncs   map[CallbackID]OnMouseMoveEventFunc
+	mouseButtonEventFuncs map[CallbackID]OnMouseButtonEventFunc
+	keyEventFuncs         map[CallbackID]OnKeyEventFunc
 	// state:
 	cursorPos           math.Vec2i // window coordinates
 	pressedMouseButtons map[glfw.MouseButton]struct{}
@@ -38,9 +38,9 @@ type InteractionSystem struct {
 // newInteractionSystem returns a new, empty interaction manager.
 func newInteractionSystem(currentCursorPos math.Vec2i) InteractionSystem {
 	return InteractionSystem{
-		mouseMoveEventFuncs:   make(map[InterID]OnMouseMoveEventFunc),
-		mouseButtonEventFuncs: make(map[InterID]OnMouseButtonEventFunc),
-		keyEventFuncs:         make(map[InterID]OnKeyEventFunc),
+		mouseMoveEventFuncs:   make(map[CallbackID]OnMouseMoveEventFunc),
+		mouseButtonEventFuncs: make(map[CallbackID]OnMouseButtonEventFunc),
+		keyEventFuncs:         make(map[CallbackID]OnKeyEventFunc),
 
 		cursorPos:           currentCursorPos,
 		pressedMouseButtons: make(map[glfw.MouseButton]struct{}, 3),
@@ -49,8 +49,8 @@ func newInteractionSystem(currentCursorPos math.Vec2i) InteractionSystem {
 }
 
 // OnMouseMoveEvent adds a callback function to be executed on  mouse movements.
-func (i *InteractionSystem) OnMouseMoveEvent(fn OnMouseMoveEventFunc) InterID {
-	id := InterID{i.idSeq.Inc()}
+func (i *InteractionSystem) OnMouseMoveEvent(fn OnMouseMoveEventFunc) CallbackID {
+	id := CallbackID{i.idSeq.Inc()}
 	i.m.Lock()
 	defer i.m.Unlock()
 	i.mouseMoveEventFuncs[id] = fn
@@ -58,15 +58,15 @@ func (i *InteractionSystem) OnMouseMoveEvent(fn OnMouseMoveEventFunc) InterID {
 }
 
 // RemoveMouseMoveEventFunc removes a previously added callback function for mouse movements.
-func (i *InteractionSystem) RemoveMouseMoveEventFunc(interID InterID) {
+func (i *InteractionSystem) RemoveMouseMoveEventFunc(cbID CallbackID) {
 	i.m.Lock()
 	defer i.m.Unlock()
-	delete(i.mouseMoveEventFuncs, interID)
+	delete(i.mouseMoveEventFuncs, cbID)
 }
 
 // OnMouseButtonEvent adds a callback function to be executed on mouse button events.
-func (i *InteractionSystem) OnMouseButtonEvent(fn OnMouseButtonEventFunc) InterID {
-	id := InterID{i.idSeq.Inc()}
+func (i *InteractionSystem) OnMouseButtonEvent(fn OnMouseButtonEventFunc) CallbackID {
+	id := CallbackID{i.idSeq.Inc()}
 	i.m.Lock()
 	defer i.m.Unlock()
 	i.mouseButtonEventFuncs[id] = fn
@@ -74,7 +74,7 @@ func (i *InteractionSystem) OnMouseButtonEvent(fn OnMouseButtonEventFunc) InterI
 }
 
 // OnMouseButton adds a callback function to be executed if a specific mouse button performs a given action.
-func (s *InteractionSystem) OnMouseButton(button glfw.MouseButton, action glfw.Action, fn func(glfw.ModifierKey)) InterID {
+func (s *InteractionSystem) OnMouseButton(button glfw.MouseButton, action glfw.Action, fn func(glfw.ModifierKey)) CallbackID {
 	return s.OnMouseButtonEvent(func(b glfw.MouseButton, a glfw.Action, mods glfw.ModifierKey) {
 		if b != button || a != action {
 			return
@@ -84,15 +84,15 @@ func (s *InteractionSystem) OnMouseButton(button glfw.MouseButton, action glfw.A
 }
 
 // RemoveMouseButtonEventFunc removes a previously added callback function for mouse button events.
-func (i *InteractionSystem) RemoveMouseButtonEventFunc(interID InterID) {
+func (i *InteractionSystem) RemoveMouseButtonEventFunc(cbID CallbackID) {
 	i.m.Lock()
 	defer i.m.Unlock()
-	delete(i.mouseButtonEventFuncs, interID)
+	delete(i.mouseButtonEventFuncs, cbID)
 }
 
 // OnKeyEvent adds a callback function to be executed on key events.
-func (i *InteractionSystem) OnKeyEvent(fn OnKeyEventFunc) InterID {
-	id := InterID{i.idSeq.Inc()}
+func (i *InteractionSystem) OnKeyEvent(fn OnKeyEventFunc) CallbackID {
+	id := CallbackID{i.idSeq.Inc()}
 	i.m.Lock()
 	defer i.m.Unlock()
 	i.keyEventFuncs[id] = fn
@@ -100,7 +100,7 @@ func (i *InteractionSystem) OnKeyEvent(fn OnKeyEventFunc) InterID {
 }
 
 // OnKey adds a callback function to be executed if a specific key performs a given action.
-func (s *InteractionSystem) OnKey(key glfw.Key, action glfw.Action, fn func(glfw.ModifierKey)) InterID {
+func (s *InteractionSystem) OnKey(key glfw.Key, action glfw.Action, fn func(glfw.ModifierKey)) CallbackID {
 	return s.OnKeyEvent(func(k glfw.Key, _ int, a glfw.Action, mods glfw.ModifierKey) {
 		if k != key || a != action {
 			return
@@ -110,10 +110,10 @@ func (s *InteractionSystem) OnKey(key glfw.Key, action glfw.Action, fn func(glfw
 }
 
 // RemoveKeyEventFunc removes a previously added callback function for key events.
-func (i *InteractionSystem) RemoveKeyEventFunc(interID InterID) {
+func (i *InteractionSystem) RemoveKeyEventFunc(cbID CallbackID) {
 	i.m.Lock()
 	defer i.m.Unlock()
-	delete(i.keyEventFuncs, interID)
+	delete(i.keyEventFuncs, cbID)
 }
 
 // RemoveAll removes all callback functions
@@ -121,9 +121,9 @@ func (i *InteractionSystem) RemoveAll() {
 	i.m.Lock()
 	defer i.m.Unlock()
 
-	i.keyEventFuncs = make(map[InterID]OnKeyEventFunc)
-	i.mouseMoveEventFuncs = make(map[InterID]OnMouseMoveEventFunc)
-	i.mouseButtonEventFuncs = make(map[InterID]OnMouseButtonEventFunc)
+	i.keyEventFuncs = make(map[CallbackID]OnKeyEventFunc)
+	i.mouseMoveEventFuncs = make(map[CallbackID]OnMouseMoveEventFunc)
+	i.mouseButtonEventFuncs = make(map[CallbackID]OnMouseButtonEventFunc)
 }
 
 // MousePos returns the current cursor position in window coordinates.

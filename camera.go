@@ -208,3 +208,9 @@ func (c *OrthoCamera) WorldSpaceToClipSpace(worldSpace mgl32.Vec2) mgl32.Vec2 {
 func (c *OrthoCamera) Matrix() (mgl32.Mat4, int) {
 	return c.vpMatrix, c.dirtyCount
 }
+
+// DirtyCount returns a counter that is incremented every time the camera is modified.
+// Can be used to check for modifications / if camera-dependent updates are needed.
+func (c *OrthoCamera) DirtyCount() int {
+	return c.dirtyCount
+}

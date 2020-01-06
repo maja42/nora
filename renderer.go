@@ -6,8 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// TODO: fix exported/unexported types
-
 //// RenderTarget represents windows or textures.
 //type RenderTarget interface {
 //	// Clear()
@@ -24,7 +22,7 @@ func newRenderer() renderer {
 	logrus.Info("Setting up renderer...")
 
 	renderer := renderer{
-	//texTargets: NewTextureTargets(ctx, ctx.scene.resolveTexture),
+		//texTargets: NewTextureTargets(ctx, ctx.scene.resolveTexture),
 	}
 
 	// OpenGL context configuration
@@ -41,7 +39,7 @@ func newRenderer() renderer {
 	return renderer
 }
 
-func (r *renderer) renderAll(cam Camera, shaders *ShaderStore, scene *Scene, samplerManager *samplerManager) {
+func (r *renderer) renderAll(cam Camera, shaders *ShaderStore, scene *Scene, samplerManager *samplerManager) (int, int) {
 	renderState := newRenderState(cam, shaders, samplerManager)
 
 	models, ret := scene.borrowModels()
@@ -53,4 +51,7 @@ func (r *renderer) renderAll(cam Camera, shaders *ShaderStore, scene *Scene, sam
 		m.Draw(renderState)
 		assert.True(len(renderState.TransformStack) == 1, "Transform stack: not empty after rendering")
 	}
+
+	return renderState.totalDrawCalls, renderState.totalPrimitives
 }
+

@@ -3,13 +3,12 @@ package shapes
 import (
 	"fmt"
 
-	"github.com/go-gl/mathgl/mgl32"
-	"github.com/maja42/nora/assert"
-
 	"github.com/maja42/gl"
 	"github.com/maja42/nora"
+	"github.com/maja42/nora/assert"
 	"github.com/maja42/nora/builtin/shader"
 	"github.com/maja42/nora/color"
+	"github.com/maja42/nora/math"
 )
 
 // Text renders a piece of text with the given font.
@@ -25,7 +24,7 @@ type Text struct {
 	mesh       nora.Mesh
 
 	text   []rune
-	bounds mgl32.Vec2 // calculated
+	bounds math.Rectf // calculated
 
 	color color.Color
 }
@@ -53,10 +52,19 @@ func (m *Text) Destroy() {
 	m.mesh.Destroy()
 }
 
+// FontScaling returns the scaling factor of the underlying font.
+// This factor is applied to all font measurements to convert them into model space.
+func (m *Text) FontScaling() float32 {
+	// Regardless of the font's dimensions, the modelspace height should be 1.
+	return 1 / float32(m.font.Height)
+}
+
 func (m *Text) update() {
 	f := m.font
-	// Regardless of the font's dimensions, the worldspace-height should be 1
-	scale := 1 / float32(f.Height)
+	scale := m.FontScaling()
+
+	m.bounds.Min[0], m.bounds.Max[0] = 0, 0
+	m.bounds.Min[1], m.bounds.Max[1] = float32(f.Ascender)*scale, float32(f.Ascender)*scale // The text's origin is at the baseline. The first line extends upwards.
 
 	vertices := make([]float32, len(m.text)*4*4) // each rune requires 4 vertices; (x, y, u, v) per vertex
 	indices := make([]uint16, len(m.text)*6)     // each rune requires 2 triangles
@@ -72,6 +80,9 @@ func (m *Text) update() {
 			continue
 		}
 		if r == '\n' {
+			if origin > m.bounds.Max[0] {
+				m.bounds.Max[0] = origin
+			}
 			origin = 0
 			baseline -= float32(f.Height) * scale
 			continue
@@ -114,6 +125,11 @@ func (m *Text) update() {
 		vtx += 4
 		idx += 6
 	}
+	if origin > m.bounds.Max[0] {
+		m.bounds.Max[0] = origin
+	}
+	m.bounds.Min[1] = baseline + float32(f.Descender)*scale // account for text the baseline
+
 	// remove unprintable characters (missing runes, new lines, ...):
 	vertices = vertices[:vtx*4]
 	indices = indices[:idx]
@@ -121,7 +137,6 @@ func (m *Text) update() {
 	vertexCount := int(vtx)
 
 	m.mesh.SetVertexData(vertexCount, vertices, indices, gl.TRIANGLES, []string{"position", "texCoord"}, nora.InterleavedBuffer)
-	m.bounds = mgl32.Vec2{origin, -baseline + float32(f.Height)}
 }
 
 // Set changes the rendered text.
@@ -133,6 +148,12 @@ func (m *Text) Set(text string) {
 // Get returns the original text.
 func (m *Text) Get() string {
 	return string(m.text)
+}
+
+// Bounds returns the bounding box of the rendered text.
+// Includes potential space requirements of ascenders/descenders, even if there are no characters that use them.
+func (m *Text) Bounds() math.Rectf {
+	return m.bounds
 }
 
 // Set changes the used font.

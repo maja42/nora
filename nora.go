@@ -3,6 +3,7 @@ package nora
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/maja42/gl"
@@ -23,13 +24,14 @@ type Nora struct {
 	desiredAspectRatio float32
 	windowResized      bool
 
-	running    <-chan struct{}
-	fps        FPSCounter
-	vSyncDelay time.Duration
+	running     <-chan struct{}
+	vSyncDelay  time.Duration // duration of a single frame (depends on monitor frequency)
+	fps         FPSCounter    // measures frame number and fps
+	renderStats atomic.Value  // atomically stores render statistics
 
-	glSync
-	renderer       renderer
-	samplerManager samplerManager
+	glSync                        // synchronization of OpenGL resources like buffer targets
+	renderer       renderer       // draws the scene
+	samplerManager samplerManager // manages samplers (=texture targets)
 
 	Camera       Camera
 	Shaders      ShaderStore
@@ -37,8 +39,6 @@ type Nora struct {
 	Scene        Scene
 	Jobs         JobSystem
 	Interactives InteractionSystem
-
-	//cursorPos mgl32.Vec2
 }
 
 var initLock sync.Mutex
@@ -121,8 +121,8 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 		desiredAspectRatio: float32(windowSize[0]) / float32(windowSize[1]),
 
 		running:    running,
-		fps:        NewFPSCounter(),
 		vSyncDelay: time.Second / time.Duration(vidmode.RefreshRate),
+		fps:        NewFPSCounter(),
 
 		renderer: newRenderer(),
 
@@ -134,6 +134,7 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 	}
 	nora.Scene = newScene(&nora.Jobs)
 	nora.samplerManager = newSamplerManager(&nora.Textures)
+	nora.renderStats.Store(RenderStats{})
 
 	nora.Camera.(*OrthoCamera).SetAspectRatio(nora.desiredAspectRatio, nora.desiredAspectRatio > 1)
 
@@ -189,7 +190,16 @@ func (n *Nora) renderFrame() {
 
 	n.Jobs.run(elapsed)
 
-	n.renderer.renderAll(n.Camera, &n.Shaders, &n.Scene, &n.samplerManager)
+	drawCalls, primitives := n.renderer.renderAll(n.Camera, &n.Shaders, &n.Scene, &n.samplerManager)
+
+	renderStats := RenderStats{
+		Frame:           frame,
+		Framerate:       framerate,
+		TotalJobs:       len(nora.Jobs.updateJobs),
+		TotalShaders:    len(nora.Shaders.shaderPrograms),
+		TotalDrawCalls:  drawCalls,
+		TotalPrimitives: primitives,
+	}
 
 	// swapbuffers waits until the next vsync (if swapinterval is 1).
 	// This means that the render-thread will be blocked while waiting and no other gl-commands can be executed.
@@ -200,6 +210,7 @@ func (n *Nora) renderFrame() {
 
 	n.window.SwapBuffers()
 	assert.NoGLError("Render frame %d", frame)
+	n.renderStats.Store(renderStats)
 	renderThread.Sync()
 	glfw.PollEvents()
 }
@@ -260,6 +271,26 @@ func (n *Nora) RenderThread() *render.RenderThread {
 	return renderThread
 }
 
+// SetClearColor changes the clear color (background color)
 func (n *Nora) SetClearColor(color color.Color) {
 	gl.ClearColor(color.R, color.G, color.B, color.A)
+}
+
+type RenderStats struct {
+	Frame           uint64
+	Framerate       float32 // frames per second
+	TotalJobs       int
+	TotalShaders    int
+	TotalDrawCalls  int
+	TotalPrimitives int
+}
+
+// RenderStats returns statistics about the last rendered frame
+func (n *Nora) RenderStats() RenderStats {
+	return n.renderStats.Load().(RenderStats)
+}
+
+// WindowSize returns the current size of the opened window
+func (n *Nora) WindowSize() math.Vec2i {
+	return n.windowSize
 }
