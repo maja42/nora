@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/maja42/glfw"
 	gomath "math"
 	"math/rand"
 	"time"
+
+	"github.com/maja42/glfw"
 
 	"github.com/maja42/nora"
 	"github.com/maja42/nora/builtin/shader"
@@ -27,23 +28,23 @@ func run() error {
 	}
 	defer nora.Destroy()
 
-	n, err := nora.Run(math.Vec2i{1920, 1080}, "Demo", nil, nil, nora.ResizeKeepAspectRatio)
+	engine, err := nora.Run(math.Vec2i{1920, 1080}, "Demo", nil, nil, nora.ResizeKeepAspectRatio)
 	if err != nil {
 		return err
 	}
-	defer n.Wait()
+	defer engine.Wait()
 
-	if err := n.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
+	if err := engine.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
 		logrus.Errorf("Failed to load builtin shaders: %s", err)
 	}
 
-	n.SetClearColor(color.Gray(0.1))
+	engine.SetClearColor(color.Gray(0.1))
 
-	cam := n.Camera.(*nora.OrthoCamera)
+	cam := engine.Camera.(*nora.OrthoCamera)
 	cam.SetAspectRatio(float32(16)/9, true)
 
 	tris := make([]*shapes.Triangle2D, 0)
-	n.Jobs.Once(func(elapsed time.Duration) {
+	engine.Jobs.Once(func(elapsed time.Duration) {
 		for i := 0; i < 2000; i++ {
 			tri := shapes.NewTriangle2D()
 			tri.SetUniformScale(0.01 + 0.05*rand.Float32())
@@ -52,11 +53,11 @@ func run() error {
 				R: rand.Float32(), G: rand.Float32(), B: rand.Float32(), A: 1,
 			})
 			tri.SetRotationZ(rand.Float32() * gomath.Pi * 2)
-			n.Scene.Attach(tri)
+			engine.Scene.Attach(tri)
 			tris = append(tris, tri)
 		}
 
-		n.Jobs.Add(func(elapsed time.Duration) {
+		engine.Jobs.Add(func(elapsed time.Duration) {
 			if elapsed > 30*time.Millisecond { // clamp
 				elapsed = 30 * time.Millisecond
 			}
@@ -73,8 +74,8 @@ func run() error {
 		})
 	})
 
-	n.Interactives.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
-		n.Stop()
+	engine.InteractionSystem.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
+		engine.Stop()
 	})
 
 	return nil

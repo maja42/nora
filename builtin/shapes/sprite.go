@@ -20,7 +20,7 @@ func NewSprite() *Sprite {
 	s := &Sprite{
 		mesh: *nora.NewMesh(mat),
 	}
-	s.Clear()
+	s.ClearTransform()
 
 	/* counter-clockwise
 	   3 - 2

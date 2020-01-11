@@ -39,7 +39,7 @@ func NewTerminal(font *nora.Font, size math.Vec2i, lineSpacing float32) *Termina
 		lineSpacing: int(float32(font.Height) * lineSpacing),
 		size:        size,
 	}
-	t.Clear()
+	t.ClearTransform()
 
 	// font characters have unique offsets and dimensions, they are not "blocked".
 	// therefore, every character needs vertices with unique offsets and texture coordinates.

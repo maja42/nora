@@ -64,7 +64,6 @@ func (s *JobSystem) AddFixed(interval time.Duration, job UpdateJob) JobID {
 		for ; elapsed >= interval; elapsed -= interval {
 			job(interval)
 		}
-		elapsed = 0
 	})
 }
 

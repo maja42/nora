@@ -8,4 +8,3 @@ func indent(s string) string {
 	}
 	return "    " + strings.Replace(s, "\n", "\n    ", -1)
 }
-

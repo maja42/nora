@@ -20,7 +20,7 @@ func NewTriangle2D() *Triangle2D {
 	s := &Triangle2D{
 		mesh: *nora.NewMesh(mat),
 	}
-	s.Clear()
+	s.ClearTransform()
 
 	vertices := []float32{
 		/*xy*/ 0, 0,

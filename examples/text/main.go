@@ -26,17 +26,17 @@ func run() error {
 	}
 	defer nora.Destroy()
 
-	n, err := nora.Run(math.Vec2i{1920, 1080}, "Demo", nil, nil, nora.ResizeKeepAspectRatio)
+	engine, err := nora.Run(math.Vec2i{1920, 1080}, "Demo", nil, nil, nora.ResizeKeepAspectRatio)
 	if err != nil {
 		return err
 	}
-	defer n.Wait()
+	defer engine.Wait()
 
-	if err := n.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
+	if err := engine.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
 		logrus.Errorf("Failed to load builtin shaders: %s", err)
 	}
 
-	n.SetClearColor(color.Gray(0.1))
+	engine.SetClearColor(color.Gray(0.1))
 
 	roboto, err := nora.LoadFont("builtin/fonts/roboto", "roboto_regular_65.xml")
 	if err != nil {
@@ -51,7 +51,7 @@ func run() error {
 	txt := shapes.NewText(roboto, "Nora rendering engine")
 	txt.SetUniformScale(0.1)
 	txt.MoveXY(-1.01, 0.775)
-	n.Scene.Attach(txt)
+	engine.Scene.Attach(txt)
 
 	txt = shapes.NewText(monospace, "To-Do:\n"+
 		"\t ✓ Support textures\n"+
@@ -65,10 +65,10 @@ func run() error {
 		"")
 	txt.SetUniformScale(0.07)
 	txt.MoveXY(-1.01, 0.65)
-	n.Scene.Attach(txt)
+	engine.Scene.Attach(txt)
 
-	n.Interactives.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
-		n.Stop()
+	engine.InteractionSystem.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
+		engine.Stop()
 	})
 
 	return nil

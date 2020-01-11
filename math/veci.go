@@ -13,7 +13,7 @@ type Vec3i [3]int
 type Vec4i [4]int
 
 func (v Vec2i) String() string {
-	return fmt.Sprintf("%d x %d", v[0], v[1])
+	return fmt.Sprintf("Vec2i[%d x %d]", v[0], v[1])
 }
 func (v Vec3i) String() string {
 	return fmt.Sprintf("Vec3i[%d x %d]", v[0], v[1], v[2])

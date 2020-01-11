@@ -24,21 +24,21 @@ func run() error {
 	}
 	defer nora.Destroy()
 
-	n, err := nora.Run(math.Vec2i{1920, 1080}, "Demo", nil, nil, nora.ResizeKeepAspectRatio)
+	engine, err := nora.Run(math.Vec2i{1920, 1080}, "Demo", nil, nil, nora.ResizeKeepAspectRatio)
 	if err != nil {
 		return err
 	}
-	defer n.Wait()
+	defer engine.Wait()
 
-	if err := n.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
+	if err := engine.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
 		logrus.Errorf("Failed to load builtin shaders: %s", err)
 	}
 
-	n.SetClearColor(color.Gray(0.1))
+	engine.SetClearColor(color.Gray(0.1))
 
 	line := shapes.NewLine2D(0.06, shapes.BevelJoint, true)
 	line.SetColor(color.Gray(0.6))
-	n.Scene.Attach(line)
+	engine.Scene.Attach(line)
 
 	line.AddPoints([]mgl32.Vec2{
 		{0, 0},
@@ -50,7 +50,7 @@ func run() error {
 
 	line = shapes.NewLine2D(0.06, shapes.MitterJoint, true)
 	line.SetColor(color.Gray(0.6))
-	n.Scene.Attach(line)
+	engine.Scene.Attach(line)
 
 	line.AddPoints([]mgl32.Vec2{
 		{-0.1, 0},
@@ -62,7 +62,7 @@ func run() error {
 
 	line = shapes.NewLine2D(0.006, shapes.MitterJoint, true)
 	line.SetColor(color.Gray(0.6))
-	n.Scene.Attach(line)
+	engine.Scene.Attach(line)
 
 	line.AddPoints([]mgl32.Vec2{
 		{-0.122, 0.05},
@@ -72,8 +72,8 @@ func run() error {
 		{0.32, 0.45},
 	}...)
 
-	n.Interactives.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
-		n.Stop()
+	engine.InteractionSystem.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
+		engine.Stop()
 	})
 
 	return nil

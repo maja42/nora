@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	glfw2 "github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/maja42/gl"
 	"github.com/maja42/gl/render"
 	"github.com/maja42/glfw"
@@ -15,11 +16,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Nora struct {
-	window             *glfw.Window
-	windowSize         math.Vec2i
-	windowTitleUpdate  time.Time
-	windowTitle        string
+// Engine represents the user interface of this library.
+// It's a singleton that can be used to access all functionality.
+type Engine struct {
+	window            *glfw.Window
+	windowTitleUpdate time.Time
+	windowTitle       string
+
 	resizePolicy       ResizePolicy
 	desiredAspectRatio float32
 	windowResized      bool
@@ -33,12 +36,14 @@ type Nora struct {
 	renderer       renderer       // draws the scene
 	samplerManager samplerManager // manages samplers (=texture targets)
 
-	Camera       Camera
-	Shaders      ShaderStore
-	Textures     TextureStore
-	Scene        Scene
-	Jobs         JobSystem
-	Interactives InteractionSystem
+	// The following members members must not be overwritten directly:
+
+	Camera            Camera
+	Shaders           ShaderStore
+	Textures          TextureStore
+	Scene             Scene
+	Jobs              JobSystem
+	InteractionSystem InteractionSystem
 }
 
 var initLock sync.Mutex
@@ -80,12 +85,13 @@ const (
 //     Multiple windows have multiple contexts. This either requires automatic context-switching, or a context-object
 //     instead of accessing gl-functions directly. --> Find out if multiple contexts/windows can be used simultaneously,
 //     when having multiple renderThreads executed from different OS-threads.
-var noraLock sync.Mutex
-var nora *Nora // For global access
+var engineLock sync.Mutex
+var engine *Engine // For global access
 
 // Run opens a new window and starts the render loop.
-func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share *glfw.Window, resizePolicy ResizePolicy) (*Nora, error) {
-	noraLock.Lock()
+// Must not be called before the library is initialized.
+func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share *glfw.Window, resizePolicy ResizePolicy) (*Engine, error) {
+	engineLock.Lock()
 
 	resizeable := gl.TRUE
 	if resizePolicy == ResizeForbid {
@@ -95,7 +101,7 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 
 	window, err := glfw.CreateWindow(windowSize[0], windowSize[1], windowTitle, monitor, share)
 	if err != nil {
-		noraLock.Unlock()
+		engineLock.Unlock()
 		return nil, err
 	}
 	window.MakeContextCurrent()
@@ -113,9 +119,8 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 	cursorX, cursorY := window.GetCursorPos()
 
 	running := make(chan struct{})
-	nora = &Nora{
+	engine = &Engine{
 		window:             window,
-		windowSize:         windowSize,
 		windowTitle:        windowTitle,
 		resizePolicy:       resizePolicy,
 		desiredAspectRatio: float32(windowSize[0]) / float32(windowSize[1]),
@@ -126,60 +131,66 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 
 		renderer: newRenderer(),
 
-		Camera:       NewOrthoCamera(),
-		Shaders:      newShaderStore(),
-		Textures:     newTextureStore(),
-		Jobs:         newJobSystem(),
-		Interactives: newInteractionSystem(math.Vec2i{int(cursorX), int(cursorY)}),
+		Camera:            NewOrthoCamera(),
+		Shaders:           newShaderStore(),
+		Textures:          newTextureStore(),
+		Jobs:              newJobSystem(),
+		InteractionSystem: newInteractionSystem(windowSize, math.Vec2i{int(cursorX), int(cursorY)}),
 	}
-	nora.Scene = newScene(&nora.Jobs)
-	nora.samplerManager = newSamplerManager(&nora.Textures)
-	nora.renderStats.Store(RenderStats{})
+	engine.Scene = newScene(&engine.Jobs)
+	engine.samplerManager = newSamplerManager(&engine.Textures)
+	engine.renderStats.Store(RenderStats{})
 
-	nora.Camera.(*OrthoCamera).SetAspectRatio(nora.desiredAspectRatio, nora.desiredAspectRatio > 1)
+	engine.Camera.(*OrthoCamera).SetAspectRatio(engine.desiredAspectRatio, engine.desiredAspectRatio > 1)
 
-	window.SetFramebufferSizeCallback(nora.resizeCallback)
-	window.SetCursorPosCallback(nora.Interactives.cursorPosCallback)
-	window.SetMouseButtonCallback(nora.Interactives.mouseButtonCallback)
-	window.SetKeyCallback(nora.Interactives.keyCallback)
+	window.SetSizeCallback(engine.resizeCallback)
+	window.SetMaximizeCallback(engine.maximizeCallback)
+	window.SetCursorPosCallback(engine.InteractionSystem.cursorPosCallback)
+	window.SetMouseButtonCallback(engine.InteractionSystem.mouseButtonCallback)
+	window.SetScrollCallback(engine.InteractionSystem.scrollCallback)
+	window.SetKeyCallback(engine.InteractionSystem.keyCallback)
 
 	var framebufferSize math.Vec2i
 	framebufferSize[0], framebufferSize[1] = window.GetFramebufferSize()
 
 	go func() {
 		defer close(running)
-		for !nora.window.ShouldClose() {
-			nora.renderFrame()
+		for !engine.window.ShouldClose() {
+			engine.renderFrame()
 		}
-		nora.cleanup()
+		engine.cleanup()
 	}()
-	return nora, nil
+	return engine, nil
 }
 
-func (n *Nora) cleanup() {
+func (n *Engine) cleanup() {
 	n.Jobs.RemoveAll()
-	n.Interactives.RemoveAll()
+	n.InteractionSystem.RemoveAll()
 	n.Shaders.UnloadAll()
 	n.Textures.UnloadAll()
 	n.Scene.DetachAndDestroyAll()
 
-	nora = nil
-	noraLock.Unlock()
+	engine = nil
+	engineLock.Unlock()
 }
 
-func (n *Nora) Stop() {
+func (n *Engine) Stop() {
 	n.window.SetShouldClose(true)
 }
 
-func (n *Nora) Wait() {
+func (n *Engine) Wait() {
 	<-n.running
 }
 
-func (n *Nora) resizeCallback(_ *glfw.Window, _, _ int) {
+func (n *Engine) resizeCallback(_ *glfw.Window, _ int, _ int) {
 	n.windowResized = true
 }
 
-func (n *Nora) renderFrame() {
+func (n *Engine) maximizeCallback(_ *glfw2.Window, _ bool) {
+	n.windowResized = true
+}
+
+func (n *Engine) renderFrame() {
 	frame, elapsed, framerate := n.fps.NextFrame()
 	n.handleResize()
 
@@ -195,8 +206,8 @@ func (n *Nora) renderFrame() {
 	renderStats := RenderStats{
 		Frame:           frame,
 		Framerate:       framerate,
-		TotalJobs:       len(nora.Jobs.updateJobs),
-		TotalShaders:    len(nora.Shaders.shaderPrograms),
+		TotalJobs:       len(engine.Jobs.updateJobs),
+		TotalShaders:    len(engine.Shaders.shaderPrograms),
 		TotalDrawCalls:  drawCalls,
 		TotalPrimitives: primitives,
 	}
@@ -215,7 +226,11 @@ func (n *Nora) renderFrame() {
 	glfw.PollEvents()
 }
 
-func (n *Nora) handleResize() {
+func (n *Engine) handleResize() {
+	// TODO: This function might try to change the window size to keep the aspect ratio
+	// 		 If the window got maximized however, this is not possible and the call will do nothing.
+	//		 Create black-borders in this scenario
+
 	if !n.windowResized {
 		return
 	}
@@ -232,27 +247,25 @@ func (n *Nora) handleResize() {
 	case ResizeKeepAspectRatio:
 		gl.Viewport(0, 0, width, height)
 
-		if n.windowSize[0] == width { // the height was modified --> adjust width
+		if n.InteractionSystem.WindowSize()[0] == width { // the height was modified --> adjust width
 			newWidth := int(float32(height) * n.desiredAspectRatio)
 
 			if newWidth != width {
 				newHeight := int(float32(newWidth) / n.desiredAspectRatio) // ensures that there won't be two size-changes due to rounding
 				logrus.Debugf("Changing window size to %d x %d", newWidth, newHeight)
 				n.window.SetSize(newWidth, newHeight)
-				return
 			}
 		} else {
 			newHeight := int(float32(width) / n.desiredAspectRatio)
 			if newHeight != height {
 				logrus.Debugf("Changing window size to %d x %d", width, newHeight)
 				n.window.SetSize(width, newHeight)
-				return
 			}
 		}
 	}
 
-	n.windowSize[0], n.windowSize[1] = width, height
-	logrus.Infof("Window size:    %v\n", n.windowSize)
+	n.InteractionSystem.updateWindowSize(math.Vec2i{width, height})
+	logrus.Infof("Window size:    %v\n", n.InteractionSystem.WindowSize())
 }
 
 func roundMillis(d time.Duration) time.Duration {
@@ -261,18 +274,18 @@ func roundMillis(d time.Duration) time.Duration {
 
 // Window returns the underlying glfw window.
 // Should usually not be required/accessed by the user.
-func (n *Nora) Window() *glfw.Window {
+func (n *Engine) Window() *glfw.Window {
 	return n.window
 }
 
 // Window returns the underlying render thread.
 // Should usually not be required/accessed by the user.
-func (n *Nora) RenderThread() *render.RenderThread {
+func (n *Engine) RenderThread() *render.RenderThread {
 	return renderThread
 }
 
 // SetClearColor changes the clear color (background color)
-func (n *Nora) SetClearColor(color color.Color) {
+func (n *Engine) SetClearColor(color color.Color) {
 	gl.ClearColor(color.R, color.G, color.B, color.A)
 }
 
@@ -286,11 +299,6 @@ type RenderStats struct {
 }
 
 // RenderStats returns statistics about the last rendered frame
-func (n *Nora) RenderStats() RenderStats {
+func (n *Engine) RenderStats() RenderStats {
 	return n.renderStats.Load().(RenderStats)
-}
-
-// WindowSize returns the current size of the opened window
-func (n *Nora) WindowSize() math.Vec2i {
-	return n.windowSize
 }

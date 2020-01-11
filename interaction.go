@@ -1,12 +1,13 @@
 package nora
 
 import (
+	"sync"
+
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/maja42/glfw"
 	"github.com/maja42/nora/assert"
 	"github.com/maja42/nora/math"
 	"go.uber.org/atomic"
-	"sync"
 )
 
 // CallbackID uniquely represents an interactive component.
@@ -14,8 +15,9 @@ type CallbackID struct {
 	uint64
 }
 
-type OnMouseMoveEventFunc func(windowPos math.Vec2i, worldspace mgl32.Vec2)
+type OnMouseMoveEventFunc func(windowPos, movement math.Vec2i)
 type OnMouseButtonEventFunc func(button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey)
+type OnScrollEventFunc func(offset math.Vec2i)
 type OnKeyEventFunc func(key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey)
 
 // InteractionSystem handles user interactions.
@@ -28,21 +30,25 @@ type InteractionSystem struct {
 	// listeners:
 	mouseMoveEventFuncs   map[CallbackID]OnMouseMoveEventFunc
 	mouseButtonEventFuncs map[CallbackID]OnMouseButtonEventFunc
+	scrollEventFuncs      map[CallbackID]OnScrollEventFunc
 	keyEventFuncs         map[CallbackID]OnKeyEventFunc
 	// state:
+	windowSize          math.Vec2i
 	cursorPos           math.Vec2i // window coordinates
 	pressedMouseButtons map[glfw.MouseButton]struct{}
 	pressedKeys         map[glfw.Key]struct{}
 }
 
 // newInteractionSystem returns a new, empty interaction manager.
-func newInteractionSystem(currentCursorPos math.Vec2i) InteractionSystem {
+func newInteractionSystem(windowSize math.Vec2i, cursorPos math.Vec2i) InteractionSystem {
 	return InteractionSystem{
 		mouseMoveEventFuncs:   make(map[CallbackID]OnMouseMoveEventFunc),
 		mouseButtonEventFuncs: make(map[CallbackID]OnMouseButtonEventFunc),
+		scrollEventFuncs:      make(map[CallbackID]OnScrollEventFunc),
 		keyEventFuncs:         make(map[CallbackID]OnKeyEventFunc),
 
-		cursorPos:           currentCursorPos,
+		windowSize:          windowSize,
+		cursorPos:           cursorPos,
 		pressedMouseButtons: make(map[glfw.MouseButton]struct{}, 3),
 		pressedKeys:         make(map[glfw.Key]struct{}, 5),
 	}
@@ -74,8 +80,8 @@ func (i *InteractionSystem) OnMouseButtonEvent(fn OnMouseButtonEventFunc) Callba
 }
 
 // OnMouseButton adds a callback function to be executed if a specific mouse button performs a given action.
-func (s *InteractionSystem) OnMouseButton(button glfw.MouseButton, action glfw.Action, fn func(glfw.ModifierKey)) CallbackID {
-	return s.OnMouseButtonEvent(func(b glfw.MouseButton, a glfw.Action, mods glfw.ModifierKey) {
+func (i *InteractionSystem) OnMouseButton(button glfw.MouseButton, action glfw.Action, fn func(glfw.ModifierKey)) CallbackID {
+	return i.OnMouseButtonEvent(func(b glfw.MouseButton, a glfw.Action, mods glfw.ModifierKey) {
 		if b != button || a != action {
 			return
 		}
@@ -88,6 +94,22 @@ func (i *InteractionSystem) RemoveMouseButtonEventFunc(cbID CallbackID) {
 	i.m.Lock()
 	defer i.m.Unlock()
 	delete(i.mouseButtonEventFuncs, cbID)
+}
+
+// OnScroll adds a callback function to be executed on mouse scrolling events.
+func (i *InteractionSystem) OnScroll(fn OnScrollEventFunc) CallbackID {
+	id := CallbackID{i.idSeq.Inc()}
+	i.m.Lock()
+	defer i.m.Unlock()
+	i.scrollEventFuncs[id] = fn
+	return id
+}
+
+// RemoveScrollEventFunc removes a previously added callback function for mouse scrolling events.
+func (i *InteractionSystem) RemoveScrollEventFunc(cbID CallbackID) {
+	i.m.Lock()
+	defer i.m.Unlock()
+	delete(i.scrollEventFuncs, cbID)
 }
 
 // OnKeyEvent adds a callback function to be executed on key events.
@@ -126,10 +148,55 @@ func (i *InteractionSystem) RemoveAll() {
 	i.mouseButtonEventFuncs = make(map[CallbackID]OnMouseButtonEventFunc)
 }
 
-// MousePos returns the current cursor position in window coordinates.
+// WindowSize returns the current size of the opened window
+func (i *InteractionSystem) WindowSize() math.Vec2i {
+	return i.windowSize
+}
+
+// WindowSpaceToClipSpace converts 2D window space [0, windowSize] into 2D clip space [-1,+1] coordinates.
+func (i *InteractionSystem) WindowSpaceToClipSpace(windowSpace mgl32.Vec2) mgl32.Vec2 {
+	return mgl32.Vec2{
+		2*windowSpace[0]/float32(i.windowSize[0]) - 1,
+		-2*windowSpace[1]/float32(i.windowSize[1]) + 1,
+	}
+}
+
+// ClipSpaceToWindowSpace converts 2D clip space [-1,+1] into 2D window space [0, windowSize] coordinates.
+func (i *InteractionSystem) ClipSpaceToWindowSpace(clipSpace mgl32.Vec2) mgl32.Vec2 {
+	return mgl32.Vec2{
+		(clipSpace[0] + 1) * float32(i.windowSize[0]) / 2,
+		(clipSpace[0] - 1) * float32(i.windowSize[0]) / -2,
+	}
+}
+
+// WindowSpaceDistToClipSpaceDist converts a 2D window space distance into a clip space distance.
+// The calculation is independent of the clip space's origin (center of screen).
+func (i *InteractionSystem) WindowSpaceDistToClipSpaceDist(windowSpaceDist mgl32.Vec2) mgl32.Vec2 {
+	return mgl32.Vec2{
+		windowSpaceDist[0] * 2 / float32(i.windowSize[0]),
+		windowSpaceDist[1] * -2 / float32(i.windowSize[1]),
+	}
+}
+
+// ClipSpaceDistToWindowSpaceDist converts a 2D clip space distance into a window space distance.
+// The calculation is independent of the clip space's origin (center of screen).
+func (i *InteractionSystem) ClipSpaceDistToWindowSpaceDist(clipSpaceDist mgl32.Vec2) mgl32.Vec2 {
+	return mgl32.Vec2{
+		clipSpaceDist[0] / 2 * float32(i.windowSize[0]),
+		clipSpaceDist[1] / -2 * float32(i.windowSize[1]),
+	}
+}
+
+// MousePosWindowSpace returns the current cursor position in window coordinates.
 // (0,0) = top left corner
-func (i *InteractionSystem) MousePos() math.Vec2i {
+func (i *InteractionSystem) MousePosWindowSpace() math.Vec2i {
 	return i.cursorPos
+}
+
+// MousePosClipSpace returns the current cursor position in clip space.
+// (0,0) = top left corner; (1,1) = bottom right corner
+func (i *InteractionSystem) MousePosClipSpace() mgl32.Vec2 {
+	return i.WindowSpaceToClipSpace(i.cursorPos.Vecf())
 }
 
 // Returns true if the given mouse button is currently pressed.
@@ -145,15 +212,22 @@ func (i *InteractionSystem) IsKeyPressed(key glfw.Key) bool {
 	return ok
 }
 
+func (i *InteractionSystem) updateWindowSize(size math.Vec2i) {
+	i.windowSize = size
+}
+
 // Executes the 'onMouseMove' callback of every interactive component
 func (i *InteractionSystem) cursorPosCallback(_ *glfw.Window, x, y float64) {
 	// No locking needed (iteration is safe)
 	// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
 	// TODO: run in parallel
 
-	i.cursorPos = math.Vec2i{int(x), int(y)}
+	newPos := math.Vec2i{int(x), int(y)}
+	movement := newPos.Sub(i.cursorPos)
+	i.cursorPos = newPos
+
 	for _, fn := range i.mouseMoveEventFuncs {
-		fn(i.cursorPos, mgl32.Vec2{}) // TODO: worldPos?
+		fn(i.cursorPos, movement)
 	}
 }
 
@@ -176,6 +250,18 @@ func (i *InteractionSystem) mouseButtonCallback(_ *glfw.Window, button glfw.Mous
 
 	for _, fn := range i.mouseButtonEventFuncs {
 		fn(button, action, mods)
+	}
+}
+
+// Executes the 'onMouseButton' callback of every interactive component
+func (i *InteractionSystem) scrollCallback(_ *glfw.Window, xOff float64, yOff float64) {
+	// No locking needed (iteration is safe)
+	// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
+	// TODO: run in parallel
+
+	offset := math.Vec2i{int(xOff), int(yOff)}
+	for _, fn := range i.scrollEventFuncs {
+		fn(offset)
 	}
 }
 

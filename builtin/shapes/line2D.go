@@ -37,7 +37,7 @@ func NewLine2D(thickness float32, lineJoint LineJoint, loop bool) *Line2D {
 	s := &Line2D{
 		mesh: *nora.NewMesh(mat),
 	}
-	s.Clear()
+	s.ClearTransform()
 	s.SetColor(color.White)
 	s.SetProperties(thickness, lineJoint, loop)
 	return s

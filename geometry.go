@@ -151,7 +151,7 @@ func AssertValidGeometry(sProgKey ShaderProgKey, vertexCount int, vertices []flo
 		return
 	}
 
-	sProg, _ := nora.Shaders.resolve(sProgKey)
+	sProg, _ := engine.Shaders.resolve(sProgKey)
 	if !assert.True(sProg != nil, "Shader %q not loaded", sProgKey) {
 		return
 	}

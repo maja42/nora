@@ -53,13 +53,13 @@ type Transform struct {
 // NewTransform creates a new identity-transformation.
 func NewTransform() *Transform {
 	t := &Transform{}
-	t.Clear()
+	t.ClearTransform()
 	return t
 }
 
-// Clear resets the transformation.
+// ClearTransform resets the transformation.
 // Can also be used for initialization instead of NewTransform().
-func (t *Transform) Clear() {
+func (t *Transform) ClearTransform() {
 	t.origin = [3]float32{0, 0, 0}
 	t.position = [3]float32{0, 0, 0}
 	t.rotation = mgl32.QuatIdent()
@@ -80,6 +80,12 @@ func (t *Transform) SetPosition(pos mgl32.Vec3) {
 // SetPositionXY sets the 2D object position.
 func (t *Transform) SetPositionXY(x, y float32) {
 	t.position[0], t.position[1] = x, y
+	t.transformDirty, t.inverseDirty = true, true
+}
+
+// SetPositionZ sets the object's Z position.
+func (t *Transform) SetPositionZ(z float32) {
+	t.position[2] = z
 	t.transformDirty, t.inverseDirty = true, true
 }
 

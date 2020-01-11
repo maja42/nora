@@ -41,7 +41,7 @@ func NewText(font *nora.Font, text string) *Text {
 		text:       []rune(text),
 		color:      color.White,
 	}
-	txt.Clear()
+	txt.ClearTransform()
 	txt.update()
 
 	txt.SetColor(color.White)

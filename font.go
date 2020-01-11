@@ -40,7 +40,7 @@ func LoadFont(path, file string) (*Font, error) {
 	//	  If the texture is reloaded, the size and individual characters are allowed to be modified,
 	//    as long as the relative location and size of each individual rune stays unmodified.
 
-	size, err := nora.Textures.Load(texKey, &TextureDefinition{
+	size, err := engine.Textures.Load(texKey, &TextureDefinition{
 		Path: texPath,
 		//ForbidReload: true,
 		Properties: TextureProperties{
@@ -64,7 +64,7 @@ func LoadFont(path, file string) (*Font, error) {
 
 func (f *Font) Destroy() {
 	logrus.Debugf("Destroying %s", f)
-	nora.Textures.Unload(f.texKey)
+	engine.Textures.Unload(f.texKey)
 }
 
 func (f *Font) String() string {

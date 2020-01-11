@@ -23,17 +23,17 @@ func run() error {
 	}
 	defer nora.Destroy()
 
-	n, err := nora.Run(math.Vec2i{1920, 1080}, "Demo", nil, nil, nora.ResizeKeepAspectRatio)
+	engine, err := nora.Run(math.Vec2i{1920, 1080}, "Demo", nil, nil, nora.ResizeKeepAspectRatio)
 	if err != nil {
 		return err
 	}
-	defer n.Wait()
+	defer engine.Wait()
 
-	if err := n.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
+	if err := engine.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
 		logrus.Errorf("Failed to load builtin shaders: %s", err)
 	}
 
-	n.Textures.Load("sheep", &nora.TextureDefinition{
+	engine.Textures.Load("sheep", &nora.TextureDefinition{
 		Path: "examples/sprite/sheep.png",
 		Properties: nora.TextureProperties{
 			MinFilter: gl.LINEAR,
@@ -45,10 +45,10 @@ func run() error {
 	sprite := shapes.NewSprite()
 	sprite.SetTexture("sheep")
 	sprite.MoveXY(-0.5, -0.5)
-	n.Scene.Attach(sprite)
+	engine.Scene.Attach(sprite)
 
-	n.Interactives.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
-		n.Stop()
+	engine.InteractionSystem.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
+		engine.Stop()
 	})
 
 	return nil

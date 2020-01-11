@@ -17,6 +17,8 @@ type OrthoCamera struct {
 	orthoSizeHalf mgl32.Vec2
 	aspectRatio   float32
 
+	// near/far-plane are the distances to the camera
+	// negative values meaning "behind the camera", leading to a higher z-coordinate in world-space
 	nearPlane float32
 	farPlane  float32
 
@@ -34,8 +36,8 @@ func NewOrthoCamera() *OrthoCamera {
 		orthoSizeHalf: [2]float32{1, 1},
 		aspectRatio:   1,
 
-		nearPlane: 1,
-		farPlane:  -1,
+		nearPlane: -1,
+		farPlane:  1,
 	}
 	cam.updateVPMatrices()
 	return cam
@@ -64,6 +66,18 @@ func (c *OrthoCamera) OrthoSize() mgl32.Vec2 {
 // AspectRatio returns the camera's aspect ratio.
 func (c *OrthoCamera) AspectRatio() float32 {
 	return c.aspectRatio
+}
+
+// Near returns the camera's near plane in world coordinates. Anything with z >=near will be invisible.
+func (c *OrthoCamera) Near() float32 {
+	// nearPlane = distance to the camera (wich has z=0); camera looks in opposite direction as world-z-axis
+	return -c.nearPlane
+}
+
+// Far returns the camera's far plane in world coordinates. Anything with z <=far will be invisible.
+func (c *OrthoCamera) Far() float32 {
+	// farPlane = distance to the camera (wich has z=0); camera looks in opposite direction as world-z-axis
+	return -c.farPlane
 }
 
 // Left returns the position of camera's left plane in world coordinates.
@@ -193,14 +207,34 @@ func (c *OrthoCamera) updateVPMatrices() {
 func (c *OrthoCamera) ClipSpaceToWorldSpace(clipSpace mgl32.Vec2) mgl32.Vec2 {
 	homogeneous := clipSpace.Vec4(0, 1)
 	worldSpace := c.inverseVMMatrix.Mul4x1(homogeneous)
+	assert.True(worldSpace[2] == 0, "z coordinate should still be zero")
 	return worldSpace.Vec2()
 }
 
-// WorldSpaceToClipSpace converts 2D world coordinates into 2D clip space [-1, +1].
+// WorldSpaceToClipSpace converts a 2D world coordinates into 2D clip space [-1, +1].
 func (c *OrthoCamera) WorldSpaceToClipSpace(worldSpace mgl32.Vec2) mgl32.Vec2 {
 	homogeneous := worldSpace.Vec4(0, 1)
 	clipSpace := c.vpMatrix.Mul4x1(homogeneous)
+	assert.True(clipSpace[2] == 0, "z coordinate should still be zero")
 	return clipSpace.Vec2()
+}
+
+// ClipSpaceDistToWorldSpaceDist converts a 2D clip space distance into a world space distance.
+// The calculation is independent of the camera position.
+func (c *OrthoCamera) ClipSpaceDistToWorldSpaceDist(clipSpaceDist mgl32.Vec2) mgl32.Vec2 {
+	return mgl32.Vec2{
+		clipSpaceDist[0] * c.orthoSizeHalf[0],
+		clipSpaceDist[1] * c.orthoSizeHalf[1],
+	}
+}
+
+// WorldSpaceDistToClipSpaceDist converts 2D world space distance into a clip space distance.
+// The calculation is independent of the camera position.
+func (c *OrthoCamera) WorldSpaceDistToClipSpaceDist(worldSpaceDist mgl32.Vec2) mgl32.Vec2 {
+	return mgl32.Vec2{
+		worldSpaceDist[0] / c.orthoSizeHalf[0],
+		worldSpaceDist[1] / c.orthoSizeHalf[1],
+	}
 }
 
 // Matrix returns the view-projection matrix and its change-counter.

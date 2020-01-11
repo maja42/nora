@@ -8,7 +8,7 @@ import (
 
 //// RenderTarget represents windows or textures.
 //type RenderTarget interface {
-//	// Clear()
+//	// ClearTransform()
 //	// TODO: more functionality at  https://www.sfml-dev.org/documentation/2.5.1/classsf_1_1RenderTarget.php
 //	Draw(*Mesh, *RenderState)
 //}
@@ -54,4 +54,3 @@ func (r *renderer) renderAll(cam Camera, shaders *ShaderStore, scene *Scene, sam
 
 	return renderState.totalDrawCalls, renderState.totalPrimitives
 }
-

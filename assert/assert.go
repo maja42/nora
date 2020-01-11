@@ -2,6 +2,7 @@ package assert
 
 import (
 	"fmt"
+
 	"github.com/maja42/gl"
 	"github.com/sirupsen/logrus"
 )

@@ -25,8 +25,8 @@ type Mesh struct {
 
 	vertexAttributes []string
 
-	vertexCount     int
-	vertexSize      int     // in bytes
+	vertexCount int
+	vertexSize  int // in bytes
 
 	indexCount     int
 	primitiveCount int
@@ -86,16 +86,16 @@ func (m *Mesh) SetVertexData(vertexCount int, vertices []float32, indices []uint
 
 	usage := gl.Enum(gl.STATIC_DRAW)
 
-	nora.lockBuffer(gl.ARRAY_BUFFER)
+	engine.lockBuffer(gl.ARRAY_BUFFER)
 	gl.BindBuffer(gl.ARRAY_BUFFER, m.vbo)
 	gl.BufferDataFloat32(gl.ARRAY_BUFFER, vertices, usage)
-	nora.unlockBuffer(gl.ARRAY_BUFFER)
+	engine.unlockBuffer(gl.ARRAY_BUFFER)
 
 	if len(indices) > 0 {
-		nora.lockBuffer(gl.ELEMENT_ARRAY_BUFFER)
+		engine.lockBuffer(gl.ELEMENT_ARRAY_BUFFER)
 		gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.ibo)
 		gl.BufferDataUint16(gl.ELEMENT_ARRAY_BUFFER, indices, usage)
-		nora.unlockBuffer(gl.ELEMENT_ARRAY_BUFFER)
+		engine.unlockBuffer(gl.ELEMENT_ARRAY_BUFFER)
 	}
 }
 
@@ -151,10 +151,10 @@ func (m *Mesh) SetVertexSubData(vertexOffset int, vertices []float32) {
 	assert.True(vertexOffset >= 0 && vertexOffset < m.vertexCount, "Invalid vertex offset (out of range)")
 	assert.True(m.vertexSize > 0 && ((len(vertices)*4)%(m.vertexSize) == 0), "Invalid vertex data size")
 
-	nora.glSync.lockBuffer(gl.ARRAY_BUFFER)
+	engine.glSync.lockBuffer(gl.ARRAY_BUFFER)
 	gl.BindBuffer(gl.ARRAY_BUFFER, m.vbo)
 	gl.BufferSubDataFloat32(gl.ARRAY_BUFFER, vertexOffset*m.vertexSize, vertices)
-	nora.glSync.unlockBuffer(gl.ARRAY_BUFFER)
+	engine.glSync.unlockBuffer(gl.ARRAY_BUFFER)
 }
 
 // SetIndexSubData changes parts of the underlying index buffer.
@@ -167,10 +167,10 @@ func (m *Mesh) SetIndexSubData(indexOffset int, indices []uint16) {
 
 	// TODO: write assertion that checks that indices don't reference out-of-bounds vertices
 
-	nora.glSync.lockBuffer(gl.ELEMENT_ARRAY_BUFFER)
+	engine.glSync.lockBuffer(gl.ELEMENT_ARRAY_BUFFER)
 	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.ibo)
 	gl.BufferSubDataUint16(gl.ELEMENT_ARRAY_BUFFER, indexOffset, indices)
-	nora.glSync.unlockBuffer(gl.ELEMENT_ARRAY_BUFFER)
+	engine.glSync.unlockBuffer(gl.ELEMENT_ARRAY_BUFFER)
 }
 
 // ClearVertexData clears the underlying buffers.
@@ -194,7 +194,7 @@ func (m *Mesh) Draw(renderState *RenderState) {
 	sProg.configureVertexAttributes(m.vertexAttributes, true)
 	defer sProg.configureVertexAttributes(m.vertexAttributes, false)
 
-	nora.glSync.lockBuffer(gl.ARRAY_BUFFER)
+	engine.glSync.lockBuffer(gl.ARRAY_BUFFER)
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, m.vbo)
 	if m.bufferLayout == InterleavedBuffer {
@@ -204,14 +204,14 @@ func (m *Mesh) Draw(renderState *RenderState) {
 	}
 
 	if m.ibo.Value != 0 {
-		nora.glSync.lockBuffer(gl.ELEMENT_ARRAY_BUFFER)
+		engine.glSync.lockBuffer(gl.ELEMENT_ARRAY_BUFFER)
 		gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.ibo)
 		gl.DrawElements(gl.Enum(m.primitiveType), m.indexCount, gl.UNSIGNED_SHORT, 0)
-		nora.glSync.unlockBuffer(gl.ELEMENT_ARRAY_BUFFER)
+		engine.glSync.unlockBuffer(gl.ELEMENT_ARRAY_BUFFER)
 	} else {
 		gl.DrawArrays(gl.Enum(m.primitiveType), 0, m.indexCount)
 	}
-	nora.glSync.unlockBuffer(gl.ARRAY_BUFFER)
+	engine.glSync.unlockBuffer(gl.ARRAY_BUFFER)
 
 	renderState.totalDrawCalls++
 	renderState.totalPrimitives += m.primitiveCount
