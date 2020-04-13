@@ -20,18 +20,19 @@ type Font struct {
 // LoadFont loads a font description and the corresponding texture.
 // The texture object is loaded on the GPU.
 // Needs to be destroyed afterwards to free GPU resources.
-func LoadFont(path, file string) (*Font, error) {
+func LoadFont(xmlPath string) (*Font, error) {
+	dir, file := filepath.Split(xmlPath)
+
 	logrus.Infof("Loading font %q...", file)
 	texKey := TextureKey("font:" + file)
 
-	xmlPath := filepath.Join(path, file)
 	desc, err := font.Load(xmlPath)
 	if err != nil {
 		return nil, fmt.Errorf("load font description: %w", err)
 	}
 	logrus.Infof("Font %s (%s): size %d, %d characters", desc.Family, desc.Style, desc.Size, len(desc.Chars))
 
-	texPath := filepath.Join(path, desc.Texture)
+	texPath := filepath.Join(dir, desc.Texture)
 
 	// Regarding texture (hot-)reloading:
 	//	  We don't support font hot-reloading, meaning that the xml description

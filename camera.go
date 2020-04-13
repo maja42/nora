@@ -43,6 +43,19 @@ func NewOrthoCamera() *OrthoCamera {
 	return cam
 }
 
+// CopyFrom applies the properties from another camera to this camera.
+func (c *OrthoCamera) CopyFrom(other *OrthoCamera) {
+	oldDirty := c.dirtyCount
+	*c = *other
+	c.dirtyCount = oldDirty + 1
+}
+
+// Copy creates a duplicate of this camera
+func (c OrthoCamera) Copy() *OrthoCamera {
+	c.dirtyCount = 0
+	return &c
+}
+
 // Position returns the camera's world position (center).
 func (c *OrthoCamera) Position() mgl32.Vec2 {
 	return c.pos

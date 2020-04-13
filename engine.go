@@ -75,8 +75,8 @@ func Destroy() {
 type ResizePolicy int
 
 const (
-	ResizeAdjustViewport  = ResizePolicy(iota) // viewport == window size
-	ResizeKeepViewport                         // viewport stays the same; can lead to distortions
+	ResizeAdjustViewport  = ResizePolicy(iota) // viewport == window size; can lead to distortions
+	ResizeKeepViewport                         // viewport stays the same; can lead to stripped content or unrenderable areas
 	ResizeForbid                               // the window can't be resized
 	ResizeKeepAspectRatio                      // the window will be resized to keep the original aspect ratio
 )

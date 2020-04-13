@@ -102,8 +102,8 @@ func (s *JobSystem) run(elapsed time.Duration) {
 	// If jobs are added/removed from within jobs, it's unspecified if the function will be executed in this frame, or the next one.
 
 	// TODO: run in parallel
-	// We don't need any ordering. If jobs should be ordered, they are combined into a single job
-	// and spawn go-routines. Alternatively, I can add a function so that jobs can spawn new jobs for the current frame only
+	// We don't need any ordering. If jobs should be ordered, they are combined into a single job and spawn go-routines.
+	// Alternatively, I can add a function so that jobs can spawn new jobs for the current frame only
 	for _, job := range s.updateJobs {
 		job(elapsed)
 	}
