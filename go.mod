@@ -9,4 +9,5 @@ require (
 	github.com/maja42/vmath v0.0.0-20200423084202-0558b67ebdbc
 	github.com/sirupsen/logrus v1.5.0
 	go.uber.org/atomic v1.5.1
+	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 )

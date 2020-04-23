@@ -1,6 +1,8 @@
 package color
 
 import (
+	"encoding/hex"
+	"fmt"
 	"image/color"
 	"math"
 )
@@ -49,6 +51,39 @@ var Blue = Color{0.0, 0.0, 1.0, 1.0}
 var Yellow = Color{1.0, 1.0, 0.0, 1.0}
 var Cyan = Color{0.0, 1.0, 1.0, 1.0}
 var Magenta = Color{1.0, 0.0, 1.0, 1.0}
+
+// Hex returns a color from a hex-string.
+// The hex string can be upper- or lower case.
+// Supports 6- and 8-character strings (alpha is optional), as well as 3- and 4-character short-strings
+func Hex(s string) (Color, error) {
+	orig := s
+	if len(s) == 3 || len(s) == 4 {
+		alpha := "FF"
+		if len(s) == 4 {
+			alpha = string(s[3]) + string(s[3])
+		}
+		s = string(s[0]) + string(s[0]) +
+			string(s[1]) + string(s[1]) +
+			string(s[2]) + string(s[2]) + alpha
+	}
+	if len(s) == 6 {
+		s += "FF"
+	}
+
+	if len(s) != 8 {
+		return Black, fmt.Errorf("invalid hex color %q", orig)
+	}
+	val, err := hex.DecodeString(s)
+	if err != nil {
+		return Black, fmt.Errorf("invalid hex color: %s", err)
+	}
+	return Color{
+		R: float32(val[0]) / 255,
+		G: float32(val[1]) / 255,
+		B: float32(val[2]) / 255,
+		A: float32(val[3]) / 255,
+	}, nil
+}
 
 // RGB returns a color with 100% opacity
 func RGB(r, g, b float32) Color {
