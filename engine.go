@@ -179,7 +179,7 @@ func (n *Engine) configureOpenGL() {
 
 	// OpenGL context configuration
 	gl.Enable(gl.DEPTH_TEST)
-	gl.DepthFunc(gl.LESS)
+	gl.DepthFunc(gl.LEQUAL)
 	gl.ClearDepthf(1)
 
 	gl.Enable(gl.CULL_FACE)
