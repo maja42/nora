@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	glfw2 "github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/maja42/gl"
 	"github.com/maja42/gl/render"
 	"github.com/maja42/glfw"
@@ -90,24 +89,33 @@ var engine *Engine // For global access
 
 // Run opens a new window and starts the render loop.
 // Must not be called before the library is initialized.
-func Run(windowSize vmath.Vec2i, windowTitle string, monitor *glfw.Monitor, share *glfw.Window, resizePolicy ResizePolicy) (*Engine, error) {
+func Run(settings Settings) (*Engine, error) {
 	engineLock.Lock()
 
 	resizeable := gl.TRUE
-	if resizePolicy == ResizeForbid {
+	if settings.ResizePolicy == ResizeForbid {
 		resizeable = gl.FALSE
 	}
 	glfw.WindowHint(glfw.Resizable, resizeable)
 
-	window, err := glfw.CreateWindow(windowSize[0], windowSize[1], windowTitle, monitor, share)
+	glfw.WindowHint(glfw.Samples, settings.Samples)
+
+	if settings.WindowSize.IsZero() {
+		settings.WindowSize = vmath.Vec2i{1280, 720} // default resolution
+	}
+
+	window, err := glfw.CreateWindow(settings.WindowSize[0], settings.WindowSize[1], settings.WindowTitle, settings.Monitor, nil)
 	if err != nil {
 		engineLock.Unlock()
 		return nil, err
 	}
 	window.MakeContextCurrent()
 
-	monitor = glfw.GetPrimaryMonitor()
+	monitor := glfw.GetPrimaryMonitor()
 	vidmode := monitor.GetVideoMode()
+
+	width, height := window.GetSize()
+	windowSize := vmath.Vec2i{width, height}
 
 	logrus.Infof("OpenGL version: %s\n", gl.GetString(gl.VERSION))
 	logrus.Infof("GLSL version:   %s\n", gl.GetString(gl.SHADING_LANGUAGE_VERSION))
@@ -121,9 +129,9 @@ func Run(windowSize vmath.Vec2i, windowTitle string, monitor *glfw.Monitor, shar
 	running := make(chan struct{})
 	engine = &Engine{
 		window:             window,
-		windowTitle:        windowTitle,
-		resizePolicy:       resizePolicy,
-		desiredAspectRatio: float32(windowSize[0]) / float32(windowSize[1]),
+		windowTitle:        settings.WindowTitle,
+		resizePolicy:       settings.ResizePolicy,
+		desiredAspectRatio: float32(settings.WindowSize[0]) / float32(settings.WindowSize[1]),
 
 		running:    running,
 		vSyncDelay: time.Second / time.Duration(vidmode.RefreshRate),
@@ -202,7 +210,7 @@ func (n *Engine) resizeCallback(_ *glfw.Window, _ int, _ int) {
 	n.windowResized = true
 }
 
-func (n *Engine) maximizeCallback(_ *glfw2.Window, _ bool) {
+func (n *Engine) maximizeCallback(_ *glfw.Window, _ bool) {
 	n.windowResized = true
 }
 

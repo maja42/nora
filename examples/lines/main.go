@@ -29,7 +29,11 @@ func run() error {
 	}
 	defer nora.Destroy()
 
-	engine, err := nora.Run(vmath.Vec2i{1920, 1080}, "Demo", nil, nil, nora.ResizeKeepAspectRatio)
+	engine, err := nora.Run(nora.Settings{
+		WindowTitle:  "Line Demo",
+		ResizePolicy: nora.ResizeAdjustViewport,
+		Samples:      4,
+	})
 	if err != nil {
 		return err
 	}

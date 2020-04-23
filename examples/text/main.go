@@ -9,7 +9,6 @@ import (
 	"github.com/maja42/nora/builtin/shader"
 	"github.com/maja42/nora/builtin/shapes"
 	"github.com/maja42/nora/color"
-	"github.com/maja42/vmath"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,7 +28,10 @@ func run() error {
 	}
 	defer nora.Destroy()
 
-	engine, err := nora.Run(vmath.Vec2i{1920, 1080}, "Demo", nil, nil, nora.ResizeKeepAspectRatio)
+	engine, err := nora.Run(nora.Settings{
+		WindowTitle:  "Text Demo",
+		ResizePolicy: nora.ResizeKeepAspectRatio,
+	})
 	if err != nil {
 		return err
 	}
