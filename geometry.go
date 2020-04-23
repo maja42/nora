@@ -127,20 +127,25 @@ func AssertValidGeometry(sProgKey ShaderProgKey, vertexCount int, vertices []flo
 		assert.True(indexCount >= vertexCount, "Obsolete vertices: not all vertices are referenced") // holes in the middle
 	}
 	// index count must be divisible by number-of-indices-per-primitive
+	effectiveIndexCount := indexCount
+	if indexCount == 0 {
+		effectiveIndexCount = vertexCount
+	}
+
 	assertMsg := "Index count %d is incompatible with primitive type %q"
 	switch primitiveType {
 	case gl.POINTS:
 	case gl.LINE_STRIP:
-		assert.True(indexCount >= 1, assertMsg, indexCount, primitiveType)
+		assert.True(effectiveIndexCount >= 1, assertMsg, effectiveIndexCount, primitiveType)
 	case gl.LINE_LOOP:
 	case gl.LINES:
-		assert.True(indexCount%2 == 0, assertMsg, indexCount, primitiveType)
+		assert.True(effectiveIndexCount%2 == 0, assertMsg, effectiveIndexCount, primitiveType)
 	case gl.TRIANGLE_STRIP:
-		assert.True(indexCount >= 2, assertMsg, indexCount, primitiveType)
+		assert.True(effectiveIndexCount >= 2, assertMsg, effectiveIndexCount, primitiveType)
 	case gl.TRIANGLE_FAN:
-		assert.True(indexCount >= 2, assertMsg, indexCount, primitiveType)
+		assert.True(effectiveIndexCount >= 2, assertMsg, effectiveIndexCount, primitiveType)
 	case gl.TRIANGLES:
-		assert.True(indexCount%3 == 0, assertMsg, indexCount, primitiveType)
+		assert.True(effectiveIndexCount%3 == 0, assertMsg, effectiveIndexCount, primitiveType)
 	default:
 		assert.Fail("Unknown primitive type %q", primitiveType)
 	}

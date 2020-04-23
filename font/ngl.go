@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/maja42/nora/math"
+	"github.com/maja42/vmath"
 )
 
 type nglFont struct {
@@ -82,9 +82,9 @@ func Load(path string) (Font, error) {
 
 		f.Chars[runes[0]] = Char{
 			Width:  c.Advance,
-			Offset: math.Vec2i{c.OffsetX, c.OffsetY},
-			Pos:    math.Vec2i{c.RectX, c.RectY},
-			Size:   math.Vec2i{c.RectW, c.RectH},
+			Offset: vmath.Vec2i{c.OffsetX, c.OffsetY},
+			Pos:    vmath.Vec2i{c.RectX, c.RectY},
+			Size:   vmath.Vec2i{c.RectW, c.RectH},
 		}
 	}
 	return f, nil

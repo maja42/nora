@@ -5,6 +5,7 @@ import (
 
 	"github.com/maja42/gl"
 	"github.com/maja42/nora/assert"
+	"github.com/maja42/vmath"
 )
 
 // Mesh is the (only) low-level construct for rendering geometry, besides ReadableMesh.
@@ -67,7 +68,7 @@ func (m *Mesh) SetMaterial(mat *Material) {
 func (m *Mesh) SetVertexData(vertexCount int, vertices []float32, indices []uint16, primitiveType PrimitiveType, vertexAttributes []string, bufferLayout BufferLayout) {
 	if len(indices) == 0 {
 		m.prepareIBO(false)
-		m.indexCount = len(vertices)
+		m.indexCount = vertexCount
 	} else {
 		m.prepareIBO(true)
 		m.indexCount = len(indices)
@@ -179,8 +180,17 @@ func (m *Mesh) ClearVertexData() {
 	m.SetVertexData(0, []float32{}, nil, gl.TRIANGLES, []string{}, InterleavedBuffer)
 }
 
-// draw must only be called during sync. rendering (no context lock)
-// the renderer needs to apply the shader and material required by the mesh.
+// TransDraw temporarily applies a model transformation to the matrix stack for rendering the mesh.
+// Utility method.
+func (m *Mesh) TransDraw(renderState *RenderState, modelTransform vmath.Mat4f) {
+	renderState.TransformStack.Push()
+	renderState.TransformStack.MulRight(modelTransform)
+	m.Draw(renderState)
+	renderState.TransformStack.Pop()
+}
+
+// Draw renders the mesh.
+// The required material (shader, textures, uniforms) are applied and the buffers are bound for rendering.
 func (m *Mesh) Draw(renderState *RenderState) {
 	if m.indexCount == 0 {
 		return

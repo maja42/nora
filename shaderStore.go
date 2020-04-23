@@ -209,3 +209,9 @@ func (s *ShaderStore) resolve(key ShaderProgKey) (*shaderProgram, sProgID) {
 	loadedProg := s.shaderPrograms[key]
 	return loadedProg.program, loadedProg.id
 }
+
+// Count returns the number of loaded shaders.
+// Intermediate shaders needed for hot-reloading are not counted.
+func (s *ShaderStore) Count() int {
+	return len(s.shaderPrograms)
+}

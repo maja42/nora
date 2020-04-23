@@ -7,7 +7,6 @@ import (
 )
 
 type Sprite struct {
-	nora.AttachableModel
 	nora.Transform
 	mesh nora.Mesh
 
@@ -50,6 +49,5 @@ func (m *Sprite) Destroy() {
 }
 
 func (m *Sprite) Draw(renderState *nora.RenderState) {
-	renderState.TransformStack.RightMul(m.GetTransform())
-	m.mesh.Draw(renderState)
+	m.mesh.TransDraw(renderState, m.GetTransform())
 }

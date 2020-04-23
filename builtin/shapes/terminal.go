@@ -6,24 +6,23 @@ import (
 	"github.com/maja42/nora/assert"
 	"github.com/maja42/nora/builtin/shader"
 	"github.com/maja42/nora/color"
-	"github.com/maja42/nora/math"
+	"github.com/maja42/vmath"
 	"github.com/sirupsen/logrus"
 )
 
 type Terminal struct {
-	nora.AttachableModel
 	nora.Transform
 	mesh nora.Mesh
 
 	font        *nora.Font
-	charSize    math.Vec2i
+	charSize    vmath.Vec2i
 	lineSpacing int
 
-	size math.Vec2i
+	size vmath.Vec2i
 	text []rune
 }
 
-func NewTerminal(font *nora.Font, size math.Vec2i, lineSpacing float32) *Terminal {
+func NewTerminal(font *nora.Font, size vmath.Vec2i, lineSpacing float32) *Terminal {
 	if !font.Monospace {
 		logrus.Warn("No monospace font (%v)", font)
 	}
@@ -35,7 +34,7 @@ func NewTerminal(font *nora.Font, size math.Vec2i, lineSpacing float32) *Termina
 	t := &Terminal{
 		mesh:        *nora.NewMesh(mat),
 		font:        font,
-		charSize:    math.Vec2i{int(font.AvgWidth()), font.Height},
+		charSize:    vmath.Vec2i{int(font.AvgWidth()), font.Height},
 		lineSpacing: int(float32(font.Height) * lineSpacing),
 		size:        size,
 	}
@@ -62,7 +61,7 @@ func NewTerminal(font *nora.Font, size math.Vec2i, lineSpacing float32) *Termina
 	idx := 0
 	for y := 0; y < size[1]; y++ {
 		for x := 0; x < size[0]; x++ {
-			vIdx := t.vtxIndex(math.Vec2i{x, y})
+			vIdx := t.vtxIndex(vmath.Vec2i{x, y})
 			copy(indices[idx:], []uint16{
 				vIdx, vIdx + 1, vIdx + 2,
 				vIdx + 2, vIdx + 3, vIdx,
@@ -78,17 +77,17 @@ func NewTerminal(font *nora.Font, size math.Vec2i, lineSpacing float32) *Termina
 }
 
 // Returns the size of an individual character in model-space
-func (t *Terminal) CharSize() math.Vec2i {
+func (t *Terminal) CharSize() vmath.Vec2i {
 	return t.charSize
 }
 
 // Returns the size of the whole terminal in model-space
-func (t *Terminal) Size() math.Vec2i {
-	return math.Vec2i{t.charSize[0] * t.size[0], t.lineSpacing * t.size[1]}
+func (t *Terminal) Size() vmath.Vec2i {
+	return vmath.Vec2i{t.charSize[0] * t.size[0], t.lineSpacing * t.size[1]}
 }
 
 // vtxIndex returns the vertex index for the given character position. Ignores vertex components/size
-func (t *Terminal) vtxIndex(pos math.Vec2i) uint16 {
+func (t *Terminal) vtxIndex(pos vmath.Vec2i) uint16 {
 	verticesPerChar := 4
 	posIdx := pos[0] + pos[1]*t.size[0]
 	assert.True(posIdx < t.size[0]*t.size[1], "posIdx out-of-range: %d <> %v in %v", posIdx, pos, t.size)
@@ -97,10 +96,10 @@ func (t *Terminal) vtxIndex(pos math.Vec2i) uint16 {
 }
 
 // CharPos returns the position of a character in model-space
-func (t *Terminal) CharPos(pos math.Vec2i) math.Vec2i {
+func (t *Terminal) CharPos(pos vmath.Vec2i) vmath.Vec2i {
 	// Character positions are measured from their bottom-left corner.
 	// The terminal (and the runes placed within) have their origin in the top-left.
-	return math.Vec2i{pos[0] * t.charSize[0], -(pos[1] + 1) * t.lineSpacing}
+	return vmath.Vec2i{pos[0] * t.charSize[0], -(pos[1] + 1) * t.lineSpacing}
 }
 
 func (t *Terminal) Destroy() {
@@ -108,11 +107,10 @@ func (t *Terminal) Destroy() {
 }
 
 func (t *Terminal) Draw(renderState *nora.RenderState) {
-	renderState.TransformStack.RightMul(t.GetTransform())
-	t.mesh.Draw(renderState)
+	t.mesh.TransDraw(renderState, t.GetTransform())
 }
 
-func (t *Terminal) SetRune(pos math.Vec2i, r rune) {
+func (t *Terminal) SetRune(pos vmath.Vec2i, r rune) {
 	runeIdx := pos[0] + pos[1]*t.size[0]
 	t.text[runeIdx] = r
 

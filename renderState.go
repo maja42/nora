@@ -1,9 +1,9 @@
 package nora
 
 import (
-	"github.com/go-gl/mathgl/mgl32/matstack"
 	"github.com/maja42/gl"
 	"github.com/maja42/nora/assert"
+	"github.com/maja42/vmath"
 )
 
 type RenderState struct {
@@ -15,7 +15,7 @@ type RenderState struct {
 	material *Material // currently applied material
 	sProgID  sProgID   // currently used shader program
 
-	TransformStack matstack.MatStack
+	TransformStack vmath.MatStack4f
 
 	// statistics
 	totalDrawCalls  int
@@ -27,7 +27,7 @@ func newRenderState(cam Camera, shaders *ShaderStore, samplerManager *samplerMan
 		camera:         cam,
 		shaders:        shaders,
 		samplerManager: samplerManager,
-		TransformStack: *matstack.NewMatStack(),
+		TransformStack: *vmath.NewMatStack4f(),
 	}
 }
 
@@ -45,7 +45,7 @@ func (r *RenderState) applyMaterial(material *Material) *shaderProgram {
 
 	modelTransform := sProg.modelTransformLocation
 	if modelTransform.Value >= 0 { // The shader supports model transforms
-		trans := r.TransformStack.Peek()
+		trans := r.TransformStack.Top()
 		gl.UniformMatrix4fv(modelTransform, trans[:])
 	}
 	return sProg

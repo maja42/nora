@@ -8,9 +8,9 @@ import (
 	"os"
 
 	"github.com/maja42/nora/assert"
+	"github.com/maja42/vmath"
 	"github.com/sirupsen/logrus"
 
-	"github.com/go-gl/mathgl/mgl32"
 	"github.com/maja42/gl"
 )
 
@@ -44,7 +44,7 @@ type TextureProperties struct {
 // Texture represents a GPU texture object for rendering
 type texture struct {
 	tex  gl.Texture // Note: golang textures have their origin in the top-left corner
-	size mgl32.Vec2
+	size vmath.Vec2f
 }
 
 // NewTexture creates a new texture object on the GPU.
@@ -54,7 +54,7 @@ type texture struct {
 func newTexture() *texture {
 	return &texture{
 		tex:  gl.CreateTexture(),
-		size: mgl32.Vec2{0, 0},
+		size: vmath.Vec2f{0, 0},
 	}
 }
 
@@ -90,7 +90,7 @@ func (t *texture) Load(path string, properties TextureProperties) error {
 
 	draw.Draw(rgba, bounds, img, image.Point{0, 0}, draw.Src) // Copy / convert image data
 
-	t.size = mgl32.Vec2{float32(bounds.Max.X), float32(bounds.Max.Y)}
+	t.size = vmath.Vec2f{float32(bounds.Max.X), float32(bounds.Max.Y)}
 
 	// TODO: Not sure if I need to set an active texture...
 	gl.BindTexture(gl.TEXTURE_2D, t.tex)
@@ -115,6 +115,6 @@ func (t *texture) Destroy() {
 
 // Size returns the dimensions of the underlying texture
 // If no texture is loaded, (0,0) is returned.
-func (t *texture) Size() mgl32.Vec2 {
+func (t *texture) Size() vmath.Vec2f {
 	return t.size
 }

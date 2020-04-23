@@ -8,10 +8,9 @@ import (
 	"sync"
 
 	"github.com/maja42/nora/assert"
+	"github.com/maja42/vmath"
 
 	"github.com/sirupsen/logrus"
-
-	"github.com/go-gl/mathgl/mgl32"
 
 	"go.uber.org/atomic"
 
@@ -93,7 +92,7 @@ func (s *TextureStore) StartHotReloading(ctx context.Context) error {
 	return nil
 }
 
-func (s *TextureStore) Load(key TextureKey, def *TextureDefinition) (mgl32.Vec2, error) {
+func (s *TextureStore) Load(key TextureKey, def *TextureDefinition) (vmath.Vec2f, error) {
 	def.Path = filepath.Clean(def.Path)
 
 	if loadedTexture, ok := s.textures[key]; ok {
@@ -111,7 +110,7 @@ func (s *TextureStore) Load(key TextureKey, def *TextureDefinition) (mgl32.Vec2,
 	tex := newTexture()
 	if err := tex.Load(def.Path, def.Properties); err != nil {
 		tex.Destroy()
-		return mgl32.Vec2{}, err
+		return vmath.Vec2f{}, err
 	}
 
 	s.textures[key] = loadedTexture{
@@ -126,16 +125,16 @@ func (s *TextureStore) Load(key TextureKey, def *TextureDefinition) (mgl32.Vec2,
 }
 
 // Reload hot-reloads the given texture from the filesystem once.
-func (s *TextureStore) Reload(key TextureKey) (mgl32.Vec2, error) {
+func (s *TextureStore) Reload(key TextureKey) (vmath.Vec2f, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 	return s.reloadTexture(key)
 }
 
-func (s *TextureStore) reloadTexture(key TextureKey) (mgl32.Vec2, error) {
+func (s *TextureStore) reloadTexture(key TextureKey) (vmath.Vec2f, error) {
 	loadedTexture, ok := s.textures[key]
 	if !ok {
-		return mgl32.Vec2{}, fmt.Errorf("texture %q is not loaded", key)
+		return vmath.Vec2f{}, fmt.Errorf("texture %q is not loaded", key)
 	}
 	if loadedTexture.intermediateTexture == nil {
 		loadedTexture.intermediateTexture = newTexture()
@@ -143,7 +142,7 @@ func (s *TextureStore) reloadTexture(key TextureKey) (mgl32.Vec2, error) {
 
 	err := loadedTexture.intermediateTexture.Load(loadedTexture.definition.Path, loadedTexture.definition.Properties)
 	if err != nil {
-		return mgl32.Vec2{}, fmt.Errorf("hot-reload texture %q: %s", key, err)
+		return vmath.Vec2f{}, fmt.Errorf("hot-reload texture %q: %s", key, err)
 	}
 
 	logrus.Infof("Replacing texture %q...", key)

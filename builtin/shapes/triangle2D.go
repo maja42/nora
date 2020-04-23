@@ -8,7 +8,6 @@ import (
 )
 
 type Triangle2D struct {
-	nora.AttachableModel
 	nora.Transform
 	mesh nora.Mesh
 }
@@ -40,6 +39,5 @@ func (m *Triangle2D) SetColor(c color.Color) {
 }
 
 func (m *Triangle2D) Draw(renderState *nora.RenderState) {
-	renderState.TransformStack.RightMul(m.GetTransform())
-	m.mesh.Draw(renderState)
+	m.mesh.TransDraw(renderState, m.GetTransform())
 }

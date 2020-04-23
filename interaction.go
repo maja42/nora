@@ -3,10 +3,9 @@ package nora
 import (
 	"sync"
 
-	"github.com/go-gl/mathgl/mgl32"
 	"github.com/maja42/glfw"
 	"github.com/maja42/nora/assert"
-	"github.com/maja42/nora/math"
+	"github.com/maja42/vmath"
 	"go.uber.org/atomic"
 )
 
@@ -15,9 +14,9 @@ type CallbackID struct {
 	uint64
 }
 
-type OnMouseMoveEventFunc func(windowPos, movement math.Vec2i)
+type OnMouseMoveEventFunc func(windowPos, movement vmath.Vec2i)
 type OnMouseButtonEventFunc func(button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey)
-type OnScrollEventFunc func(offset math.Vec2i)
+type OnScrollEventFunc func(offset vmath.Vec2i)
 type OnKeyEventFunc func(key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey)
 
 // InteractionSystem handles user interactions.
@@ -33,14 +32,14 @@ type InteractionSystem struct {
 	scrollEventFuncs      map[CallbackID]OnScrollEventFunc
 	keyEventFuncs         map[CallbackID]OnKeyEventFunc
 	// state:
-	windowSize          math.Vec2i
-	cursorPos           math.Vec2i // window coordinates
+	windowSize          vmath.Vec2i
+	cursorPos           vmath.Vec2i // window coordinates
 	pressedMouseButtons map[glfw.MouseButton]struct{}
 	pressedKeys         map[glfw.Key]struct{}
 }
 
 // newInteractionSystem returns a new, empty interaction manager.
-func newInteractionSystem(windowSize math.Vec2i, cursorPos math.Vec2i) InteractionSystem {
+func newInteractionSystem(windowSize vmath.Vec2i, cursorPos vmath.Vec2i) InteractionSystem {
 	return InteractionSystem{
 		mouseMoveEventFuncs:   make(map[CallbackID]OnMouseMoveEventFunc),
 		mouseButtonEventFuncs: make(map[CallbackID]OnMouseButtonEventFunc),
@@ -149,21 +148,21 @@ func (i *InteractionSystem) RemoveAll() {
 }
 
 // WindowSize returns the current size of the opened window
-func (i *InteractionSystem) WindowSize() math.Vec2i {
+func (i *InteractionSystem) WindowSize() vmath.Vec2i {
 	return i.windowSize
 }
 
 // WindowSpaceToClipSpace converts 2D window space [0, windowSize] into 2D clip space [-1,+1] coordinates.
-func (i *InteractionSystem) WindowSpaceToClipSpace(windowSpace mgl32.Vec2) mgl32.Vec2 {
-	return mgl32.Vec2{
+func (i *InteractionSystem) WindowSpaceToClipSpace(windowSpace vmath.Vec2f) vmath.Vec2f {
+	return vmath.Vec2f{
 		2*windowSpace[0]/float32(i.windowSize[0]) - 1,
 		-2*windowSpace[1]/float32(i.windowSize[1]) + 1,
 	}
 }
 
 // ClipSpaceToWindowSpace converts 2D clip space [-1,+1] into 2D window space [0, windowSize] coordinates.
-func (i *InteractionSystem) ClipSpaceToWindowSpace(clipSpace mgl32.Vec2) mgl32.Vec2 {
-	return mgl32.Vec2{
+func (i *InteractionSystem) ClipSpaceToWindowSpace(clipSpace vmath.Vec2f) vmath.Vec2f {
+	return vmath.Vec2f{
 		(clipSpace[0] + 1) * float32(i.windowSize[0]) / 2,
 		(clipSpace[0] - 1) * float32(i.windowSize[0]) / -2,
 	}
@@ -171,8 +170,8 @@ func (i *InteractionSystem) ClipSpaceToWindowSpace(clipSpace mgl32.Vec2) mgl32.V
 
 // WindowSpaceDistToClipSpaceDist converts a 2D window space distance into a clip space distance.
 // The calculation is independent of the clip space's origin (center of screen).
-func (i *InteractionSystem) WindowSpaceDistToClipSpaceDist(windowSpaceDist mgl32.Vec2) mgl32.Vec2 {
-	return mgl32.Vec2{
+func (i *InteractionSystem) WindowSpaceDistToClipSpaceDist(windowSpaceDist vmath.Vec2f) vmath.Vec2f {
+	return vmath.Vec2f{
 		windowSpaceDist[0] * 2 / float32(i.windowSize[0]),
 		windowSpaceDist[1] * -2 / float32(i.windowSize[1]),
 	}
@@ -180,8 +179,8 @@ func (i *InteractionSystem) WindowSpaceDistToClipSpaceDist(windowSpaceDist mgl32
 
 // ClipSpaceDistToWindowSpaceDist converts a 2D clip space distance into a window space distance.
 // The calculation is independent of the clip space's origin (center of screen).
-func (i *InteractionSystem) ClipSpaceDistToWindowSpaceDist(clipSpaceDist mgl32.Vec2) mgl32.Vec2 {
-	return mgl32.Vec2{
+func (i *InteractionSystem) ClipSpaceDistToWindowSpaceDist(clipSpaceDist vmath.Vec2f) vmath.Vec2f {
+	return vmath.Vec2f{
 		clipSpaceDist[0] / 2 * float32(i.windowSize[0]),
 		clipSpaceDist[1] / -2 * float32(i.windowSize[1]),
 	}
@@ -189,14 +188,14 @@ func (i *InteractionSystem) ClipSpaceDistToWindowSpaceDist(clipSpaceDist mgl32.V
 
 // MousePosWindowSpace returns the current cursor position in window coordinates.
 // (0,0) = top left corner
-func (i *InteractionSystem) MousePosWindowSpace() math.Vec2i {
+func (i *InteractionSystem) MousePosWindowSpace() vmath.Vec2i {
 	return i.cursorPos
 }
 
 // MousePosClipSpace returns the current cursor position in clip space.
 // (0,0) = top left corner; (1,1) = bottom right corner
-func (i *InteractionSystem) MousePosClipSpace() mgl32.Vec2 {
-	return i.WindowSpaceToClipSpace(i.cursorPos.Vecf())
+func (i *InteractionSystem) MousePosClipSpace() vmath.Vec2f {
+	return i.WindowSpaceToClipSpace(i.cursorPos.Vec2f())
 }
 
 // Returns true if the given mouse button is currently pressed.
@@ -212,7 +211,7 @@ func (i *InteractionSystem) IsKeyPressed(key glfw.Key) bool {
 	return ok
 }
 
-func (i *InteractionSystem) updateWindowSize(size math.Vec2i) {
+func (i *InteractionSystem) updateWindowSize(size vmath.Vec2i) {
 	i.windowSize = size
 }
 
@@ -222,7 +221,7 @@ func (i *InteractionSystem) cursorPosCallback(_ *glfw.Window, x, y float64) {
 	// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
 	// TODO: run in parallel
 
-	newPos := math.Vec2i{int(x), int(y)}
+	newPos := vmath.Vec2i{int(x), int(y)}
 	movement := newPos.Sub(i.cursorPos)
 	i.cursorPos = newPos
 
@@ -259,7 +258,7 @@ func (i *InteractionSystem) scrollCallback(_ *glfw.Window, xOff float64, yOff fl
 	// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
 	// TODO: run in parallel
 
-	offset := math.Vec2i{int(xOff), int(yOff)}
+	offset := vmath.Vec2i{int(xOff), int(yOff)}
 	for _, fn := range i.scrollEventFuncs {
 		fn(offset)
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/maja42/glfw"
 	"github.com/maja42/nora/assert"
 	"github.com/maja42/nora/color"
-	"github.com/maja42/nora/math"
+	"github.com/maja42/vmath"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,18 +33,18 @@ type Engine struct {
 	renderStats atomic.Value  // atomically stores render statistics
 
 	glSync                        // synchronization of OpenGL resources like buffer targets
-	renderer       renderer       // draws the scene
 	samplerManager samplerManager // manages samplers (=texture targets)
 
 	// The following members members must not be overwritten directly:
+	Camera   Camera
+	Shaders  ShaderStore
+	Textures TextureStore
 
-	Camera            Camera
-	Shaders           ShaderStore
-	Textures          TextureStore
-	Scene             Scene
-	Jobs              JobSystem
-	InteractionSystem InteractionSystem
+	DrawFrame         DrawFrameFunc     // frame drawing function
+	InteractionSystem InteractionSystem // user interaction (mouse, keyboard, ...)
 }
+
+type DrawFrameFunc func(elapsed time.Duration, renderState *RenderState)
 
 var initLock sync.Mutex
 var renderThread *render.RenderThread
@@ -90,7 +90,7 @@ var engine *Engine // For global access
 
 // Run opens a new window and starts the render loop.
 // Must not be called before the library is initialized.
-func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share *glfw.Window, resizePolicy ResizePolicy) (*Engine, error) {
+func Run(windowSize vmath.Vec2i, windowTitle string, monitor *glfw.Monitor, share *glfw.Window, resizePolicy ResizePolicy) (*Engine, error) {
 	engineLock.Lock()
 
 	resizeable := gl.TRUE
@@ -129,15 +129,16 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 		vSyncDelay: time.Second / time.Duration(vidmode.RefreshRate),
 		fps:        NewFPSCounter(),
 
-		renderer: newRenderer(),
+		Camera:   NewOrthoCamera(),
+		Shaders:  newShaderStore(),
+		Textures: newTextureStore(),
 
-		Camera:            NewOrthoCamera(),
-		Shaders:           newShaderStore(),
-		Textures:          newTextureStore(),
-		Jobs:              newJobSystem(),
-		InteractionSystem: newInteractionSystem(windowSize, math.Vec2i{int(cursorX), int(cursorY)}),
+		DrawFrame:         func(time.Duration, *RenderState) {},
+		InteractionSystem: newInteractionSystem(windowSize, vmath.Vec2i{int(cursorX), int(cursorY)}),
 	}
-	engine.Scene = newScene(&engine.Jobs)
+
+	engine.configureOpenGL()
+
 	engine.samplerManager = newSamplerManager(&engine.Textures)
 	engine.renderStats.Store(RenderStats{})
 
@@ -150,7 +151,7 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 	window.SetScrollCallback(engine.InteractionSystem.scrollCallback)
 	window.SetKeyCallback(engine.InteractionSystem.keyCallback)
 
-	var framebufferSize math.Vec2i
+	var framebufferSize vmath.Vec2i
 	framebufferSize[0], framebufferSize[1] = window.GetFramebufferSize()
 
 	go func() {
@@ -158,17 +159,32 @@ func Run(windowSize math.Vec2i, windowTitle string, monitor *glfw.Monitor, share
 		for !engine.window.ShouldClose() {
 			engine.renderFrame()
 		}
+		assert.NoGLError("Engine execution")
 		engine.cleanup()
+		assert.NoGLError("Engine cleanup")
 	}()
 	return engine, nil
 }
 
+func (n *Engine) configureOpenGL() {
+	logrus.Info("Configuring OpenGL...")
+
+	// OpenGL context configuration
+	gl.Enable(gl.DEPTH_TEST)
+	gl.DepthFunc(gl.LESS)
+	gl.ClearDepthf(1)
+
+	gl.Enable(gl.CULL_FACE)
+
+	// enable transparency
+	gl.Enable(gl.BLEND)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+}
+
 func (n *Engine) cleanup() {
-	n.Jobs.RemoveAll()
 	n.InteractionSystem.RemoveAll()
 	n.Shaders.UnloadAll()
 	n.Textures.UnloadAll()
-	n.Scene.DetachAndDestroyAll()
 
 	engine = nil
 	engineLock.Unlock()
@@ -199,17 +215,17 @@ func (n *Engine) renderFrame() {
 		n.windowTitleUpdate = time.Now()
 	}
 
-	n.Jobs.run(elapsed)
+	renderState := newRenderState(n.Camera, &n.Shaders, &n.samplerManager)
+	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-	drawCalls, primitives := n.renderer.renderAll(n.Camera, &n.Shaders, &n.Scene, &n.samplerManager)
+	n.DrawFrame(elapsed, renderState)
+	assert.True(renderState.TransformStack.Size() == 1, "Transform stack: not empty after rendering")
 
 	renderStats := RenderStats{
 		Frame:           frame,
 		Framerate:       framerate,
-		TotalJobs:       len(engine.Jobs.updateJobs),
-		TotalShaders:    len(engine.Shaders.shaderPrograms),
-		TotalDrawCalls:  drawCalls,
-		TotalPrimitives: primitives,
+		TotalDrawCalls:  renderState.totalDrawCalls,
+		TotalPrimitives: renderState.totalPrimitives,
 	}
 
 	// swapbuffers waits until the next vsync (if swapinterval is 1).
@@ -227,9 +243,9 @@ func (n *Engine) renderFrame() {
 }
 
 func (n *Engine) handleResize() {
-	// TODO: This function might try to change the window size to keep the aspect ratio
+	// TODO: This function might try to change the window size to keep the aspect ratio.
 	// 		 If the window got maximized however, this is not possible and the call will do nothing.
-	//		 Create black-borders in this scenario
+	//		 Create black-borders in this scenario.
 
 	if !n.windowResized {
 		return
@@ -264,7 +280,7 @@ func (n *Engine) handleResize() {
 		}
 	}
 
-	n.InteractionSystem.updateWindowSize(math.Vec2i{width, height})
+	n.InteractionSystem.updateWindowSize(vmath.Vec2i{width, height})
 	logrus.Infof("Window size:    %v\n", n.InteractionSystem.WindowSize())
 }
 
@@ -292,10 +308,18 @@ func (n *Engine) SetClearColor(color color.Color) {
 type RenderStats struct {
 	Frame           uint64
 	Framerate       float32 // frames per second
-	TotalJobs       int
-	TotalShaders    int
 	TotalDrawCalls  int
 	TotalPrimitives int
+}
+
+func (r *RenderStats) String() string {
+	return fmt.Sprintf(""+
+		"Frame         %d\n"+
+		"Framerate     %.2f fps\n"+
+		"Draw calls    %d\n"+
+		"Primitives    %d",
+		r.Frame, r.Framerate,
+		r.TotalDrawCalls, r.TotalPrimitives)
 }
 
 // RenderStats returns statistics about the last rendered frame

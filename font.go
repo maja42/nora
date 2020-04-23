@@ -4,17 +4,16 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
-
-	"github.com/go-gl/mathgl/mgl32"
 	"github.com/maja42/gl"
 	"github.com/maja42/nora/font"
+	"github.com/maja42/vmath"
+	"github.com/sirupsen/logrus"
 )
 
 type Font struct {
 	font.Font
 	texKey  TextureKey
-	texSize mgl32.Vec2
+	texSize vmath.Vec2f
 }
 
 // LoadFont loads a font description and the corresponding texture.
@@ -81,12 +80,12 @@ func (f *Font) Char(r rune) (font.Char, bool) {
 	return char, ok
 }
 
-func (f *Font) TexCoord(r rune) (mgl32.Vec2, mgl32.Vec2) {
+func (f *Font) TexCoord(r rune) (vmath.Vec2f, vmath.Vec2f) {
 	char := f.Chars[r]
 	size := f.texSize
 
 	// Texture coordinates: [0, 1], starting on the bootom left (y=inverted)
-	var tl, br mgl32.Vec2
+	var tl, br vmath.Vec2f
 	tl[0] = float32(char.Pos[0]) / size[0]
 	tl[1] = 1 - (float32(char.Pos[1]) / size[1])
 	br[0] = tl[0] + float32(char.Size[0])/size[0]

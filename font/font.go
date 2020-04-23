@@ -1,7 +1,7 @@
 package font
 
 import (
-	"github.com/maja42/nora/math"
+	"github.com/maja42/vmath"
 )
 
 type Font struct {
@@ -20,9 +20,9 @@ type Font struct {
 
 type Char struct {
 	Width  int
-	Offset math.Vec2i
-	Pos    math.Vec2i
-	Size   math.Vec2i
+	Offset vmath.Vec2i
+	Pos    vmath.Vec2i
+	Size   vmath.Vec2i
 }
 
 // AvgWidth returns the average width across all characters
@@ -40,7 +40,7 @@ func (f *Font) AvgWidth() float32 {
 // Runes returns a list with all runes in this font
 func (f *Font) Runes() []rune {
 	runes := make([]rune, 0, len(f.Chars))
-	for r, _ := range f.Chars {
+	for r := range f.Chars {
 		runes = append(runes, r)
 	}
 	return runes

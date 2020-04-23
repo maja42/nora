@@ -8,14 +8,13 @@ import (
 	"github.com/maja42/nora/assert"
 	"github.com/maja42/nora/builtin/shader"
 	"github.com/maja42/nora/color"
-	"github.com/maja42/nora/math"
+	"github.com/maja42/vmath"
 )
 
 // Text renders a piece of text with the given font.
 // Supports multi-line text.
 // Origin = left, baseline. Text height (unscaled) = 1
 type Text struct {
-	nora.AttachableModel
 	nora.Transform
 
 	font       *nora.Font
@@ -24,7 +23,7 @@ type Text struct {
 	mesh       nora.Mesh
 
 	text   []rune
-	bounds math.Rectf // calculated
+	bounds vmath.Rectf // calculated
 
 	color color.Color
 }
@@ -152,7 +151,7 @@ func (m *Text) Get() string {
 
 // Bounds returns the bounding box of the rendered text.
 // Includes potential space requirements of ascenders/descenders, even if there are no characters that use them.
-func (m *Text) Bounds() math.Rectf {
+func (m *Text) Bounds() vmath.Rectf {
 	return m.bounds
 }
 
@@ -191,8 +190,7 @@ func (m *Text) Color() color.Color {
 }
 
 func (m *Text) Draw(renderState *nora.RenderState) {
-	renderState.TransformStack.RightMul(m.GetTransform())
-	m.mesh.Draw(renderState)
+	m.mesh.TransDraw(renderState, m.GetTransform())
 }
 
 func (m *Text) String() string {

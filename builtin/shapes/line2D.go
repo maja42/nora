@@ -1,13 +1,11 @@
 package shapes
 
 import (
-	"time"
-
-	"github.com/go-gl/mathgl/mgl32"
 	"github.com/maja42/gl"
 	"github.com/maja42/nora"
 	"github.com/maja42/nora/builtin/shader"
 	"github.com/maja42/nora/color"
+	"github.com/maja42/vmath"
 )
 
 type LineJoint int
@@ -18,7 +16,6 @@ const (
 )
 
 type Line2D struct {
-	nora.AttachableModel
 	nora.Transform
 	mesh nora.Mesh
 
@@ -27,9 +24,11 @@ type Line2D struct {
 	loop      bool
 	color     color.Color
 
-	points []mgl32.Vec2
+	points []vmath.Vec2f
 	dirty  bool
 }
+
+// TODO: known issue: when using miter-joints, non-looping lines and lines with 2 points are not rendered correctly
 
 func NewLine2D(thickness float32, lineJoint LineJoint, loop bool) *Line2D {
 	mat := nora.NewMaterial(shader.COL_2D)
@@ -62,12 +61,12 @@ func (m *Line2D) SetProperties(thickness float32, lineJoint LineJoint, loop bool
 
 // Points returns all waypoints of the line.
 // The caller must not modify the returned data.
-func (m *Line2D) Points() []mgl32.Vec2 {
+func (m *Line2D) Points() []vmath.Vec2f {
 	return m.points
 }
 
 // AddPoints appends additional waypoints to the line
-func (m *Line2D) AddPoints(p ...mgl32.Vec2) {
+func (m *Line2D) AddPoints(p ...vmath.Vec2f) {
 	m.points = append(m.points, p...)
 	m.dirty = true
 }
@@ -89,10 +88,14 @@ func (m *Line2D) SetColor(c color.Color) {
 	m.mesh.Material().Uniform4fColor("fragColor", c)
 }
 
-func (m *Line2D) Update(elapsed time.Duration) {
-	if !m.dirty {
-		return
+func (m *Line2D) Draw(renderState *nora.RenderState) {
+	if m.dirty {
+		m.update()
 	}
+	m.mesh.TransDraw(renderState, m.GetTransform())
+}
+
+func (m *Line2D) update() {
 	switch m.lineJoint {
 	case BevelJoint:
 		m.updateBevel()
@@ -125,10 +128,10 @@ func (m *Line2D) updateBevel() {
 		start := m.points[l]
 		end := m.points[(l+1)%pointCnt]
 
-		line := mgl32.Vec2{end[0] - start[0], end[1] - start[1]}
-		norm := mgl32.Vec2{-line[1], line[0]}
+		line := vmath.Vec2f{end[0] - start[0], end[1] - start[1]}
+		norm := vmath.Vec2f{-line[1], line[0]}
 		norm = norm.Normalize()
-		norm = norm.Mul(m.thickness / 2)
+		norm = norm.MulScalar(m.thickness / 2)
 
 		copy(vertices[l*4*2:], []float32{
 			start[0] + norm[0], start[1] + norm[1],
@@ -161,8 +164,8 @@ func (m *Line2D) updateMiter() {
 	}
 	vertices := make([]float32, vertexCount*2)
 
-	var p0, p1, p2 mgl32.Vec2
-	var v1, v2, v3 mgl32.Vec2
+	var p0, p1, p2 vmath.Vec2f
+	var v1, v2, v3 vmath.Vec2f
 
 	for i := 0; i < pointCnt; i++ {
 		// Get the two segments shared by the current point
@@ -185,7 +188,7 @@ func (m *Line2D) updateMiter() {
 		// Combine the normals
 		factor := 1 + (v1[0]*v2[0] + v1[1]*v2[1])
 		v3 = v1.Add(v2)
-		v3 = v3.Mul(m.thickness / 2 / factor)
+		v3 = v3.MulScalar(m.thickness / 2 / factor)
 
 		// calculate the final vertices
 		v1 = p1.Add(v3)
@@ -206,12 +209,7 @@ func (m *Line2D) updateMiter() {
 	m.mesh.SetVertexData(vertexCount, vertices, nil, gl.TRIANGLE_STRIP, []string{"position"}, nora.CompactBuffer)
 }
 
-func computeNormal(from, to mgl32.Vec2) mgl32.Vec2 {
-	norm := mgl32.Vec2{from[1] - to[1], to[0] - from[0]}
+func computeNormal(from, to vmath.Vec2f) vmath.Vec2f {
+	norm := vmath.Vec2f{from[1] - to[1], to[0] - from[0]}
 	return norm.Normalize()
-}
-
-func (m *Line2D) Draw(renderState *nora.RenderState) {
-	renderState.TransformStack.RightMul(m.GetTransform())
-	m.mesh.Draw(renderState)
 }

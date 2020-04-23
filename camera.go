@@ -1,20 +1,20 @@
 package nora
 
 import (
-	"github.com/go-gl/mathgl/mgl32"
 	"github.com/maja42/nora/assert"
+	"github.com/maja42/vmath"
 )
 
 // Camera defines the world's area that is visible on the screen.
 type Camera interface {
 	// Matrix returns the view-projection matrix and its change-counter.
 	// The change-counter is incremented every time camera properties are modified.
-	Matrix() (mgl32.Mat4, int)
+	Matrix() (vmath.Mat4f, int)
 }
 
 type OrthoCamera struct {
-	pos           mgl32.Vec2
-	orthoSizeHalf mgl32.Vec2
+	pos           vmath.Vec2f
+	orthoSizeHalf vmath.Vec2f
 	aspectRatio   float32
 
 	// near/far-plane are the distances to the camera
@@ -22,8 +22,8 @@ type OrthoCamera struct {
 	nearPlane float32
 	farPlane  float32
 
-	vpMatrix        mgl32.Mat4
-	inverseVMMatrix mgl32.Mat4
+	vpMatrix        vmath.Mat4f
+	inverseVMMatrix vmath.Mat4f
 
 	dirtyCount int
 }
@@ -57,7 +57,7 @@ func (c OrthoCamera) Copy() *OrthoCamera {
 }
 
 // Position returns the camera's world position (center).
-func (c *OrthoCamera) Position() mgl32.Vec2 {
+func (c *OrthoCamera) Position() vmath.Vec2f {
 	return c.pos
 }
 
@@ -72,8 +72,8 @@ func (c *OrthoCamera) OrthoHeight() float32 {
 }
 
 // OrthoSize returns the visible space in world coordinates.
-func (c *OrthoCamera) OrthoSize() mgl32.Vec2 {
-	return c.orthoSizeHalf.Mul(2)
+func (c *OrthoCamera) OrthoSize() vmath.Vec2f {
+	return c.orthoSizeHalf.MulScalar(2)
 }
 
 // AspectRatio returns the camera's aspect ratio.
@@ -114,7 +114,7 @@ func (c *OrthoCamera) Bottom() float32 {
 }
 
 // SetPosition sets the camera center's world position.
-func (c *OrthoCamera) SetPosition(vec mgl32.Vec2) {
+func (c *OrthoCamera) SetPosition(vec vmath.Vec2f) {
 	c.pos = vec
 	c.updateVPMatrices()
 }
@@ -126,7 +126,7 @@ func (c *OrthoCamera) SetPositionXY(x, y float32) {
 }
 
 // Move translates the camera into the opposite direction.
-func (c *OrthoCamera) Move(vec mgl32.Vec2) {
+func (c *OrthoCamera) Move(vec vmath.Vec2f) {
 	c.pos = c.pos.Sub(vec) // camera moves to opposite direction
 	c.updateVPMatrices()
 }
@@ -197,8 +197,8 @@ func (c *OrthoCamera) SetAspectRatio(aspectRatio float32, keepOrthoHeight bool) 
 // FocusArea focuses the given area by ensuring that everything is visible.
 // If the aspect ratio of the given area is different than the ratio of the camera,
 // the camera zooms out, unveiling additional space to the viewer.
-func (c *OrthoCamera) FocusArea(bottomLeft mgl32.Vec2, size mgl32.Vec2) {
-	center := size.Mul(0.5).Add(bottomLeft)
+func (c *OrthoCamera) FocusArea(bottomLeft vmath.Vec2f, size vmath.Vec2f) {
+	center := size.MulScalar(0.5).Add(bottomLeft)
 
 	visAreaAspectRatio := size[0] / size[1]
 
@@ -211,48 +211,42 @@ func (c *OrthoCamera) FocusArea(bottomLeft mgl32.Vec2, size mgl32.Vec2) {
 }
 
 func (c *OrthoCamera) updateVPMatrices() {
-	c.vpMatrix = mgl32.Ortho(c.Left(), c.Right(), c.Bottom(), c.Top(), c.nearPlane, c.farPlane)
-	c.inverseVMMatrix = c.vpMatrix.Inv()
+	c.vpMatrix = vmath.Ortho(c.Left(), c.Right(), c.Bottom(), c.Top(), c.nearPlane, c.farPlane)
+	c.inverseVMMatrix, _ = c.vpMatrix.Inverse()
 	c.dirtyCount++
 }
 
 // ClipSpaceToWorldSpace converts 2D clip space [-1, +1] into 2D world coordinates.
-func (c *OrthoCamera) ClipSpaceToWorldSpace(clipSpace mgl32.Vec2) mgl32.Vec2 {
-	homogeneous := clipSpace.Vec4(0, 1)
-	worldSpace := c.inverseVMMatrix.Mul4x1(homogeneous)
+func (c *OrthoCamera) ClipSpaceToWorldSpace(clipSpace vmath.Vec2f) vmath.Vec2f {
+	homogeneous := clipSpace.Vec4f(0, 1)
+	worldSpace := c.inverseVMMatrix.MulVec(homogeneous)
 	assert.True(worldSpace[2] == 0, "z coordinate should still be zero")
-	return worldSpace.Vec2()
+	return worldSpace.XY()
 }
 
 // WorldSpaceToClipSpace converts a 2D world coordinates into 2D clip space [-1, +1].
-func (c *OrthoCamera) WorldSpaceToClipSpace(worldSpace mgl32.Vec2) mgl32.Vec2 {
-	homogeneous := worldSpace.Vec4(0, 1)
-	clipSpace := c.vpMatrix.Mul4x1(homogeneous)
+func (c *OrthoCamera) WorldSpaceToClipSpace(worldSpace vmath.Vec2f) vmath.Vec2f {
+	homogeneous := worldSpace.Vec4f(0, 1)
+	clipSpace := c.vpMatrix.MulVec(homogeneous)
 	assert.True(clipSpace[2] == 0, "z coordinate should still be zero")
-	return clipSpace.Vec2()
+	return clipSpace.XY()
 }
 
 // ClipSpaceDistToWorldSpaceDist converts a 2D clip space distance into a world space distance.
 // The calculation is independent of the camera position.
-func (c *OrthoCamera) ClipSpaceDistToWorldSpaceDist(clipSpaceDist mgl32.Vec2) mgl32.Vec2 {
-	return mgl32.Vec2{
-		clipSpaceDist[0] * c.orthoSizeHalf[0],
-		clipSpaceDist[1] * c.orthoSizeHalf[1],
-	}
+func (c *OrthoCamera) ClipSpaceDistToWorldSpaceDist(clipSpaceDist vmath.Vec2f) vmath.Vec2f {
+	return clipSpaceDist.Mul(c.orthoSizeHalf)
 }
 
 // WorldSpaceDistToClipSpaceDist converts 2D world space distance into a clip space distance.
 // The calculation is independent of the camera position.
-func (c *OrthoCamera) WorldSpaceDistToClipSpaceDist(worldSpaceDist mgl32.Vec2) mgl32.Vec2 {
-	return mgl32.Vec2{
-		worldSpaceDist[0] / c.orthoSizeHalf[0],
-		worldSpaceDist[1] / c.orthoSizeHalf[1],
-	}
+func (c *OrthoCamera) WorldSpaceDistToClipSpaceDist(worldSpaceDist vmath.Vec2f) vmath.Vec2f {
+	return worldSpaceDist.Div(c.orthoSizeHalf)
 }
 
 // Matrix returns the view-projection matrix and its change-counter.
 // The change-counter must be incremented every time camera properties are modified.
-func (c *OrthoCamera) Matrix() (mgl32.Mat4, int) {
+func (c *OrthoCamera) Matrix() (vmath.Mat4f, int) {
 	return c.vpMatrix, c.dirtyCount
 }
 
