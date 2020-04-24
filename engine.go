@@ -66,6 +66,11 @@ func Init() error {
 // Destroy destroys all remaining windows, frees any allocated resources and de-initializes the OpenGL and GLFW libraries.
 // Stops the render thread afterwards.
 func Destroy() {
+	if engine != nil {
+		// if the engine was not stopped (eg. due to a panic), stop it now
+		engine.Stop()
+		engine.Wait()
+	}
 	glfw.Terminate()
 	renderThread.Terminate()
 	initLock.Unlock()
