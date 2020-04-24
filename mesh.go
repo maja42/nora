@@ -66,6 +66,8 @@ func (m *Mesh) SetMaterial(mat *Material) {
 //  - vertexAttributes 	The (ordered) set of attributes within the vertices.
 //  - bufferLayout      How vertices are laid out within the vertex array.
 func (m *Mesh) SetVertexData(vertexCount int, vertices []float32, indices []uint16, primitiveType PrimitiveType, vertexAttributes []string, bufferLayout BufferLayout) {
+	assert.True(m.vbo.Value != 0, "Mesh was not initialized correctly")
+
 	if len(indices) == 0 {
 		m.prepareIBO(false)
 		m.indexCount = vertexCount

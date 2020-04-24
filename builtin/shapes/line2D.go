@@ -28,8 +28,6 @@ type Line2D struct {
 	dirty  bool
 }
 
-// TODO: known issue: when using miter-joints, non-looping lines and lines with 2 points are not rendered correctly
-
 func NewLine2D(thickness float32, lineJoint LineJoint, loop bool) *Line2D {
 	mat := nora.NewMaterial(shader.COL_2D)
 
@@ -158,37 +156,54 @@ func (m *Line2D) updateMiter() {
 		return
 	}
 
+	loop := m.loop
+	if pointCnt == 2 {
+		loop = false
+	}
+
 	vertexCount := pointCnt * 2
-	if m.loop {
+	if loop {
 		vertexCount += 2
 	}
 	vertices := make([]float32, vertexCount*2)
 
 	var p0, p1, p2 vmath.Vec2f
 	var v1, v2, v3 vmath.Vec2f
+	var factor float32
 
 	for i := 0; i < pointCnt; i++ {
-		// Get the two segments shared by the current point
-		if i == 0 {
-			p0 = m.points[pointCnt-1]
-		} else {
-			p0 = m.points[i-1]
-		}
 		p1 = m.points[i]
-		if i == pointCnt-1 {
-			p2 = m.points[0]
+
+		if i == 0 && !loop { // start piece; compute normal to first element
+			v3 = computeNormal(p1, m.points[1])
+			factor = 1
+		} else if i == pointCnt-1 && !loop { // end piece; compute normal to last segment
+			v3 = computeNormal(m.points[i-1], p1)
+			factor = 1
 		} else {
-			p2 = m.points[i+1]
+			// Get the two segments shared by the current point
+			if i == 0 {
+				p0 = m.points[pointCnt-1]
+			} else {
+				p0 = m.points[i-1]
+			}
+
+			if i == pointCnt-1 {
+				p2 = m.points[0]
+			} else {
+				p2 = m.points[i+1]
+			}
+
+			// Compute their normal
+			v1 = computeNormal(p0, p1)
+			v2 = computeNormal(p1, p2)
+
+			// Combine the normals
+			factor = 1 + (v1[0]*v2[0] + v1[1]*v2[1])
+			v3 = v1.Add(v2)
 		}
 
-		// Compute their normal
-		v1 = computeNormal(p0, p1)
-		v2 = computeNormal(p1, p2)
-
-		// Combine the normals
-		factor := 1 + (v1[0]*v2[0] + v1[1]*v2[1])
-		v3 = v1.Add(v2)
-		v3 = v3.MulScalar(m.thickness / 2 / factor)
+		v3 = v3.MulScalar(m.thickness / 2 / factor) // adjust thickness
 
 		// calculate the final vertices
 		v1 = p1.Add(v3)
@@ -200,7 +215,7 @@ func (m *Line2D) updateMiter() {
 		})
 	}
 
-	if m.loop {
+	if loop {
 		copy(vertices[pointCnt*4:], []float32{
 			vertices[0], vertices[1],
 			vertices[2], vertices[3],
@@ -210,6 +225,7 @@ func (m *Line2D) updateMiter() {
 }
 
 func computeNormal(from, to vmath.Vec2f) vmath.Vec2f {
+	// short of to.Sub(from).NormalVec(true).Normalize()
 	norm := vmath.Vec2f{from[1] - to[1], to[0] - from[0]}
 	return norm.Normalize()
 }
