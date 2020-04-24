@@ -29,7 +29,7 @@ func run() error {
 	}
 	defer nora.Destroy()
 
-	engine, err := nora.Run(nora.Settings{
+	engine, err := nora.CreateWindow(nora.Settings{
 		WindowTitle:  "Line Demo",
 		ResizePolicy: nora.ResizeAdjustViewport,
 		Samples:      4,
@@ -37,7 +37,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer engine.Wait()
+	defer engine.Destroy()
 
 	if err := engine.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
 		logrus.Errorf("Failed to load builtin shaders: %s", err)
@@ -75,11 +75,6 @@ func run() error {
 		{0.32, 0.45},
 	}...)
 
-	engine.DrawFrame = func(elapsed time.Duration, renderState *nora.RenderState) {
-		line1.Draw(renderState)
-		line2.Draw(renderState)
-		line3.Draw(renderState)
-	}
 	var mode gl.Enum = gl.FILL
 	engine.InteractionSystem.OnKey(glfw.KeySpace, glfw.Press, func(key glfw.ModifierKey) {
 		go func() { // calling gl functions within a key-callback is currently not possible
@@ -91,10 +86,19 @@ func run() error {
 			gl.PolygonMode(mode)
 		}()
 	})
+
+	stop := false
 	engine.InteractionSystem.OnKeyEvent(func(k glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
 		if k != glfw.KeySpace {
-			engine.Stop()
+			stop = true
 		}
+	})
+
+	engine.Render(func(elapsed time.Duration, renderState *nora.RenderState) bool {
+		line1.Draw(renderState)
+		line2.Draw(renderState)
+		line3.Draw(renderState)
+		return stop
 	})
 	return nil
 }

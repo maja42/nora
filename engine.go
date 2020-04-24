@@ -26,7 +26,8 @@ type Engine struct {
 	desiredAspectRatio float32
 	windowResized      bool
 
-	running     <-chan struct{}
+	rendering sync.Mutex // ensures that only one render-function can be executed at once
+
 	vSyncDelay  time.Duration // duration of a single frame (depends on monitor frequency)
 	fps         FPSCounter    // measures frame number and fps
 	renderStats atomic.Value  // atomically stores render statistics
@@ -39,11 +40,8 @@ type Engine struct {
 	Shaders  ShaderStore
 	Textures TextureStore
 
-	DrawFrame         DrawFrameFunc     // frame drawing function
 	InteractionSystem InteractionSystem // user interaction (mouse, keyboard, ...)
 }
-
-type DrawFrameFunc func(elapsed time.Duration, renderState *RenderState)
 
 var initLock sync.Mutex
 var renderThread *render.RenderThread
@@ -53,13 +51,13 @@ func Init() error {
 	initLock.Lock()
 	renderThread = render.New()
 
+	gl.Init(renderThread)
+
 	if err := glfw.Init(renderThread, gl.ContextWatcher); err != nil {
 		renderThread.Terminate()
 		initLock.Unlock()
 		return fmt.Errorf("init glfw: %w", err)
 	}
-
-	gl.Init(renderThread)
 	return nil
 }
 
@@ -67,9 +65,9 @@ func Init() error {
 // Stops the render thread afterwards.
 func Destroy() {
 	if engine != nil {
-		// if the engine was not stopped (eg. due to a panic), stop it now
-		engine.Stop()
-		engine.Wait()
+		logrus.Warnf("Engine was not destroyed before shutting down OpenGL.")
+		// if the engine was not destroyed (eg. due to a panic), stop it now
+		engine.Destroy()
 	}
 	glfw.Terminate()
 	renderThread.Terminate()
@@ -92,10 +90,12 @@ const (
 var engineLock sync.Mutex
 var engine *Engine // For global access
 
-// Run opens a new window and starts the render loop.
-// Must not be called before the library is initialized.
-func Run(settings Settings) (*Engine, error) {
-	engineLock.Lock()
+// CreateWindow opens a new window and initializes the engine.
+// Must be called after the library is initialized.
+// Call Render() on the returned engine object to start rendering. The window will stay hidden until Render() is called for the first time
+// Call Destroy() to close the window and free resources.
+func CreateWindow(settings Settings) (*Engine, error) {
+	engineLock.Lock() // There can only be one window at a time (context-switching not implemented yet)
 
 	resizeable := gl.TRUE
 	if settings.ResizePolicy == ResizeForbid {
@@ -104,6 +104,8 @@ func Run(settings Settings) (*Engine, error) {
 	glfw.WindowHint(glfw.Resizable, resizeable)
 
 	glfw.WindowHint(glfw.Samples, settings.Samples)
+
+	glfw.WindowHint(glfw.Visible, 0) // Hide window until the render-function is called the first time
 
 	if settings.WindowSize.IsZero() {
 		settings.WindowSize = vmath.Vec2i{1280, 720} // default resolution
@@ -119,26 +121,28 @@ func Run(settings Settings) (*Engine, error) {
 	monitor := glfw.GetPrimaryMonitor()
 	vidmode := monitor.GetVideoMode()
 
-	width, height := window.GetSize()
-	windowSize := vmath.Vec2i{width, height}
+	var windowSize vmath.Vec2i
+	windowSize[0], windowSize[1] = window.GetSize()
 
-	logrus.Infof("OpenGL version: %s\n", gl.GetString(gl.VERSION))
-	logrus.Infof("GLSL version:   %s\n", gl.GetString(gl.SHADING_LANGUAGE_VERSION))
-	logrus.Infof("Vendor:         %s\n", gl.GetString(gl.VENDOR))
-	logrus.Infof("Renderer:       %s\n", gl.GetString(gl.RENDERER))
-	logrus.Infof("Monitor:        %d x %d @ %dHz (%s)", vidmode.Width, vidmode.Height, vidmode.RefreshRate, monitor.GetName())
-	logrus.Infof("Window size:    %v\n", windowSize)
+	var framebufferSize vmath.Vec2i
+	framebufferSize[0], framebufferSize[1] = window.GetFramebufferSize()
+
+	logrus.Infof("OpenGL version:   %s\n", gl.GetString(gl.VERSION))
+	logrus.Infof("GLSL version:     %s\n", gl.GetString(gl.SHADING_LANGUAGE_VERSION))
+	logrus.Infof("Vendor:           %s\n", gl.GetString(gl.VENDOR))
+	logrus.Infof("Renderer:         %s\n", gl.GetString(gl.RENDERER))
+	logrus.Infof("Monitor:          %d x %d @ %dHz (%s)", vidmode.Width, vidmode.Height, vidmode.RefreshRate, monitor.GetName())
+	logrus.Infof("Window size:      %v\n", windowSize)
+	logrus.Infof("Framebuffer size: %v\n", framebufferSize)
 
 	cursorX, cursorY := window.GetCursorPos()
 
-	running := make(chan struct{})
 	engine = &Engine{
 		window:             window,
 		windowTitle:        settings.WindowTitle,
 		resizePolicy:       settings.ResizePolicy,
 		desiredAspectRatio: float32(settings.WindowSize[0]) / float32(settings.WindowSize[1]),
 
-		running:    running,
 		vSyncDelay: time.Second / time.Duration(vidmode.RefreshRate),
 		fps:        NewFPSCounter(),
 
@@ -146,7 +150,6 @@ func Run(settings Settings) (*Engine, error) {
 		Shaders:  newShaderStore(),
 		Textures: newTextureStore(),
 
-		DrawFrame:         func(time.Duration, *RenderState) {},
 		InteractionSystem: newInteractionSystem(windowSize, vmath.Vec2i{int(cursorX), int(cursorY)}),
 	}
 
@@ -155,27 +158,18 @@ func Run(settings Settings) (*Engine, error) {
 	engine.samplerManager = newSamplerManager(&engine.Textures)
 	engine.renderStats.Store(RenderStats{})
 
+	// wire resize configuration
 	engine.Camera.(*OrthoCamera).SetAspectRatio(engine.desiredAspectRatio, engine.desiredAspectRatio > 1)
-
 	window.SetSizeCallback(engine.resizeCallback)
 	window.SetMaximizeCallback(engine.maximizeCallback)
+
+	// wire interaction system
 	window.SetCursorPosCallback(engine.InteractionSystem.cursorPosCallback)
 	window.SetMouseButtonCallback(engine.InteractionSystem.mouseButtonCallback)
 	window.SetScrollCallback(engine.InteractionSystem.scrollCallback)
 	window.SetKeyCallback(engine.InteractionSystem.keyCallback)
 
-	var framebufferSize vmath.Vec2i
-	framebufferSize[0], framebufferSize[1] = window.GetFramebufferSize()
-
-	go func() {
-		defer close(running)
-		for !engine.window.ShouldClose() {
-			engine.renderFrame()
-		}
-		assert.NoGLError("Engine execution")
-		engine.cleanup()
-		assert.NoGLError("Engine cleanup")
-	}()
+	assert.NoGLError("Engine setup")
 	return engine, nil
 }
 
@@ -194,32 +188,34 @@ func (n *Engine) configureOpenGL() {
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 }
 
-func (n *Engine) cleanup() {
-	n.InteractionSystem.RemoveAll()
-	n.Shaders.UnloadAll()
-	n.Textures.UnloadAll()
+type DrawFrameFunc func(elapsed time.Duration, renderState *RenderState) (stop bool)
 
-	engine = nil
-	engineLock.Unlock()
+// Render starts polling events and rendering to the window.
+// The given frameFunc is called every frame, until it returns 1 (="stop"), or the window is closed / the engine is destroyed.
+// Returns 1 if the window was closed and the engine must be destroyed. In this case no subsequent calls to "Render()" are permitted.
+//
+// Note that user interactions are polled once every frame. User input callbacks cannot race with the render function.
+// Note that there should always be one active render function, otherwise the window will not respond anymore due to the missing event polling.
+func (n *Engine) Render(frameFunc DrawFrameFunc) bool {
+	n.rendering.Lock()
+	defer n.rendering.Unlock()
+	n.window.Show()
+
+	shouldClose := false
+	for {
+		shouldClose = engine.window.ShouldClose()
+		if shouldClose {
+			break
+		}
+		if stop := engine.renderFrame(frameFunc); stop {
+			break
+		}
+	}
+	assert.NoGLError("Render loop end")
+	return shouldClose
 }
 
-func (n *Engine) Stop() {
-	n.window.SetShouldClose(true)
-}
-
-func (n *Engine) Wait() {
-	<-n.running
-}
-
-func (n *Engine) resizeCallback(_ *glfw.Window, _ int, _ int) {
-	n.windowResized = true
-}
-
-func (n *Engine) maximizeCallback(_ *glfw.Window, _ bool) {
-	n.windowResized = true
-}
-
-func (n *Engine) renderFrame() {
+func (n *Engine) renderFrame(frameFunc DrawFrameFunc) bool {
 	frame, elapsed, framerate := n.fps.NextFrame()
 	n.handleResize()
 
@@ -231,7 +227,7 @@ func (n *Engine) renderFrame() {
 	renderState := newRenderState(n.Camera, &n.Shaders, &n.samplerManager)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-	n.DrawFrame(elapsed, renderState)
+	stop := frameFunc(elapsed, renderState)
 	assert.True(renderState.TransformStack.Size() == 1, "Transform stack: not empty after rendering")
 
 	renderStats := RenderStats{
@@ -253,6 +249,36 @@ func (n *Engine) renderFrame() {
 	n.renderStats.Store(renderStats)
 	renderThread.Sync()
 	glfw.PollEvents()
+	return stop
+}
+
+func (n *Engine) Destroy() {
+	logrus.Debug("Waiting for current frame to finish")
+	n.window.SetShouldClose(true)
+	n.rendering.Lock() // Ensures that the render loop stopped and can't be started anymore
+
+	assert.NoGLError("Engine shutting down")
+	logrus.Debug("Shutting down engine")
+
+	n.InteractionSystem.RemoveAll()
+	n.Shaders.UnloadAll()
+	n.Textures.UnloadAll()
+	assert.NoGLError("Engine shut down")
+
+	n.window.Destroy()
+	gl.CheckError() // for some reason, window.Destroy() succeeds, but triggers a gl error; ignore that error
+
+	engine = nil
+	engineLock.Unlock()
+	logrus.Info("Engine shut down")
+}
+
+func (n *Engine) resizeCallback(_ *glfw.Window, _ int, _ int) {
+	n.windowResized = true
+}
+
+func (n *Engine) maximizeCallback(_ *glfw.Window, _ bool) {
+	n.windowResized = true
 }
 
 func (n *Engine) handleResize() {
@@ -307,7 +333,7 @@ func (n *Engine) Window() *glfw.Window {
 	return n.window
 }
 
-// Window returns the underlying render thread.
+// RenderThread returns the underlying render thread.
 // Should usually not be required/accessed by the user.
 func (n *Engine) RenderThread() *render.RenderThread {
 	return renderThread

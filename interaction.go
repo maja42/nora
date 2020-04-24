@@ -23,6 +23,7 @@ type OnKeyEventFunc func(key glfw.Key, scancode int, action glfw.Action, mods gl
 // 	- tracks the current mouse position
 //	- tracks pressed buttons
 //	- asynchronously informs components about an interaction
+// User interactions are polled once every frame. Callbacks can therefore not race with the render function.
 type InteractionSystem struct {
 	m     sync.Mutex
 	idSeq atomic.Uint64

@@ -29,14 +29,14 @@ func run() error {
 	}
 	defer nora.Destroy()
 
-	engine, err := nora.Run(nora.Settings{
+	engine, err := nora.CreateWindow(nora.Settings{
 		WindowTitle:  "Terminal Demo",
 		ResizePolicy: nora.ResizeKeepAspectRatio,
 	})
 	if err != nil {
 		return err
 	}
-	defer engine.Wait()
+	defer engine.Destroy()
 
 	if err := engine.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
 		logrus.Errorf("Failed to load builtin shaders: %s", err)
@@ -64,12 +64,14 @@ func run() error {
 		term.SetRune(pos, r)
 	})
 
-	engine.DrawFrame = func(elapsed time.Duration, renderState *nora.RenderState) {
+	stop := false
+	engine.InteractionSystem.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
+		stop = true
+	})
+	engine.Render(func(elapsed time.Duration, renderState *nora.RenderState) bool {
 		randomize(elapsed)
 		term.Draw(renderState)
-	}
-	engine.InteractionSystem.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
-		engine.Stop()
+		return stop
 	})
 	return nil
 }

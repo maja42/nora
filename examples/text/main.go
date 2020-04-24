@@ -28,14 +28,14 @@ func run() error {
 	}
 	defer nora.Destroy()
 
-	engine, err := nora.Run(nora.Settings{
+	engine, err := nora.CreateWindow(nora.Settings{
 		WindowTitle:  "Text Demo",
 		ResizePolicy: nora.ResizeKeepAspectRatio,
 	})
 	if err != nil {
 		return err
 	}
-	defer engine.Wait()
+	defer engine.Destroy()
 
 	if err := engine.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
 		logrus.Errorf("Failed to load builtin shaders: %s", err)
@@ -80,14 +80,17 @@ func run() error {
 		}()
 	})
 
-	engine.DrawFrame = func(elapsed time.Duration, renderState *nora.RenderState) {
-		txt1.Draw(renderState)
-		txt2.Draw(renderState)
-	}
+	stop := false
 	engine.InteractionSystem.OnKeyEvent(func(k glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
 		if k != glfw.KeySpace {
-			engine.Stop()
+			stop = true
 		}
+	})
+
+	engine.Render(func(elapsed time.Duration, renderState *nora.RenderState) bool {
+		txt1.Draw(renderState)
+		txt2.Draw(renderState)
+		return stop
 	})
 	return nil
 }

@@ -31,14 +31,14 @@ func run() error {
 	}
 	defer nora.Destroy()
 
-	engine, err := nora.Run(nora.Settings{
+	engine, err := nora.CreateWindow(nora.Settings{
 		WindowTitle:  "Triangle Demo",
 		ResizePolicy: nora.ResizeKeepAspectRatio,
 	})
 	if err != nil {
 		return err
 	}
-	defer engine.Wait()
+	defer engine.Destroy()
 
 	if err := engine.Shaders.LoadAll(shader.Builtins("builtin/shader")); err != nil {
 		logrus.Errorf("Failed to load builtin shaders: %s", err)
@@ -61,8 +61,12 @@ func run() error {
 		tri.SetRotationZ(rand.Float32() * gomath.Pi * 2)
 		tris[i] = tri
 	}
+	stop := false
+	engine.InteractionSystem.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
+		stop = true
+	})
 
-	engine.DrawFrame = func(elapsed time.Duration, renderState *nora.RenderState) {
+	engine.Render(func(elapsed time.Duration, renderState *nora.RenderState) bool {
 		if elapsed > 30*time.Millisecond { // clamp
 			elapsed = 30 * time.Millisecond
 		}
@@ -82,10 +86,8 @@ func run() error {
 
 			tri.Draw(renderState)
 		}
-	}
-	engine.InteractionSystem.OnKeyEvent(func(_ glfw.Key, _ int, _ glfw.Action, _ glfw.ModifierKey) {
-		engine.Stop()
-	})
 
+		return stop
+	})
 	return nil
 }
