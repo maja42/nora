@@ -193,6 +193,10 @@ func (m *Text) Draw(renderState *nora.RenderState) {
 	m.mesh.TransDraw(renderState, m.GetTransform())
 }
 
+func (m *Text) TransDraw(renderState *nora.RenderState, transform vmath.Mat4f) {
+	m.mesh.TransDraw(renderState, m.GetTransform().Mul(transform))
+}
+
 func (m *Text) String() string {
 	return fmt.Sprintf("Text(%q/%s)", string(m.text), m.font)
 }

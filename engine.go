@@ -127,13 +127,14 @@ func CreateWindow(settings Settings) (*Engine, error) {
 	var framebufferSize vmath.Vec2i
 	framebufferSize[0], framebufferSize[1] = window.GetFramebufferSize()
 
-	logrus.Infof("OpenGL version:   %s\n", gl.GetString(gl.VERSION))
-	logrus.Infof("GLSL version:     %s\n", gl.GetString(gl.SHADING_LANGUAGE_VERSION))
-	logrus.Infof("Vendor:           %s\n", gl.GetString(gl.VENDOR))
-	logrus.Infof("Renderer:         %s\n", gl.GetString(gl.RENDERER))
+	logrus.Infof("OpenGL version:   %s", gl.GetString(gl.VERSION))
+	logrus.Infof("GLSL version:     %s", gl.GetString(gl.SHADING_LANGUAGE_VERSION))
+	logrus.Infof("Vendor:           %s", gl.GetString(gl.VENDOR))
+	logrus.Infof("Renderer:         %s", gl.GetString(gl.RENDERER))
 	logrus.Infof("Monitor:          %d x %d @ %dHz (%s)", vidmode.Width, vidmode.Height, vidmode.RefreshRate, monitor.GetName())
-	logrus.Infof("Window size:      %v\n", windowSize)
-	logrus.Infof("Framebuffer size: %v\n", framebufferSize)
+	logrus.Infof("Window size:      %s", windowSize.Format("%d x %d"))
+	logrus.Infof("Framebuffer size: %s", framebufferSize.Format("%d x %d"))
+	logrus.Infof("")
 
 	cursorX, cursorY := window.GetCursorPos()
 
