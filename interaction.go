@@ -27,11 +27,16 @@ type OnKeyEventFunc func(key glfw.Key, scancode int, action glfw.Action, mods gl
 type InteractionSystem struct {
 	m     sync.Mutex
 	idSeq atomic.Uint64
+
+	eventBufferLock sync.Mutex
+	eventBuffer     []func()
+
 	// listeners:
 	mouseMoveEventFuncs   map[CallbackID]OnMouseMoveEventFunc
 	mouseButtonEventFuncs map[CallbackID]OnMouseButtonEventFunc
 	scrollEventFuncs      map[CallbackID]OnScrollEventFunc
 	keyEventFuncs         map[CallbackID]OnKeyEventFunc
+
 	// state:
 	windowSize          vmath.Vec2i
 	cursorPos           vmath.Vec2i // window coordinates
@@ -143,8 +148,8 @@ func (i *InteractionSystem) OnKeyEvent(fn OnKeyEventFunc) CallbackID {
 }
 
 // OnKey adds a callback function to be executed if a specific key performs a given action.
-func (s *InteractionSystem) OnKey(key glfw.Key, action glfw.Action, fn func(glfw.ModifierKey)) CallbackID {
-	return s.OnKeyEvent(func(k glfw.Key, _ int, a glfw.Action, mods glfw.ModifierKey) {
+func (i *InteractionSystem) OnKey(key glfw.Key, action glfw.Action, fn func(glfw.ModifierKey)) CallbackID {
+	return i.OnKeyEvent(func(k glfw.Key, _ int, a glfw.Action, mods glfw.ModifierKey) {
 		if k != key || a != action {
 			return
 		}
@@ -244,56 +249,80 @@ func (i *InteractionSystem) updateWindowSize(size vmath.Vec2i) {
 	i.windowSize = size
 }
 
-// Executes the 'onMouseMove' callback of every interactive component
+// Fires all queued input events and clears the input buffer
+func (i *InteractionSystem) FireEvents() {
+	i.eventBufferLock.Lock()
+	defer i.eventBufferLock.Unlock()
+	for _, fn := range i.eventBuffer {
+		fn()
+	}
+	i.eventBuffer = i.eventBuffer[:0]
+}
+
+func (i *InteractionSystem) pushEvent(handler func()) {
+	// This method is always called from the OS thread (via glfw).
+	// Most of the time, it is called while the PollEvents() command is executed.
+	// According to glfw however, the OS might also be able deliver events outside of PollEvents() call,
+	// which requires us to lock the event-buffer. I'm not completely sure about this behaviour though.
+	i.eventBufferLock.Lock()
+	defer i.eventBufferLock.Unlock()
+	i.eventBuffer = append(i.eventBuffer, handler)
+}
+
+// Buffers the 'onMouseMove' callback of every interactive component.
+// This function is called by glfw from the OS thread / renderThread.
 func (i *InteractionSystem) cursorPosCallback(_ *glfw.Window, x, y float64) {
-	// No locking needed (iteration is safe)
-	// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
-	// TODO: run in parallel
+	i.pushEvent(func() {
+		newPos := vmath.Vec2i{int(x), int(y)}
+		movement := newPos.Sub(i.cursorPos)
+		i.cursorPos = newPos
 
-	newPos := vmath.Vec2i{int(x), int(y)}
-	movement := newPos.Sub(i.cursorPos)
-	i.cursorPos = newPos
-
-	for _, fn := range i.mouseMoveEventFuncs {
-		fn(i.cursorPos, movement)
-	}
+		// No locking needed (iteration is safe)
+		// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
+		for _, fn := range i.mouseMoveEventFuncs {
+			fn(i.cursorPos, movement)
+		}
+	})
 }
 
-// Executes the 'onMouseButton' callback of every interactive component
+// Buffers the 'onMouseButton' callback of every interactive component.
+// This function is called by glfw from the OS thread / renderThread.
 func (i *InteractionSystem) mouseButtonCallback(_ *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
-	switch action {
-	case glfw.Press:
-		assert.False(i.IsMouseButtonPressed(button), "Mouse button state inconsistent with events")
-		i.pressedMouseButtons[button] = struct{}{}
-	case glfw.Release:
-		assert.True(i.IsMouseButtonPressed(button), "Mouse button state inconsistent with events")
-		delete(i.pressedMouseButtons, button)
-	case glfw.Repeat:
-		assert.True(i.IsMouseButtonPressed(button), "Mouse button state inconsistent with events")
-	}
+	i.pushEvent(func() {
+		switch action {
+		case glfw.Press:
+			assert.False(i.IsMouseButtonPressed(button), "Mouse button state inconsistent with events")
+			i.pressedMouseButtons[button] = struct{}{}
+		case glfw.Release:
+			assert.True(i.IsMouseButtonPressed(button), "Mouse button state inconsistent with events")
+			delete(i.pressedMouseButtons, button)
+		case glfw.Repeat:
+			assert.True(i.IsMouseButtonPressed(button), "Mouse button state inconsistent with events")
+		}
 
-	// No locking needed (iteration is safe)
-	// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
-	// TODO: run in parallel
-
-	for _, fn := range i.mouseButtonEventFuncs {
-		fn(button, action, mods)
-	}
+		// No locking needed (iteration is safe)
+		// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
+		for _, fn := range i.mouseButtonEventFuncs {
+			fn(button, action, mods)
+		}
+	})
 }
 
-// Executes the 'onMouseButton' callback of every interactive component
+// Buffers the 'onMouseButton' callback of every interactive component.
+// This function is called by glfw from the OS thread / renderThread.
 func (i *InteractionSystem) scrollCallback(_ *glfw.Window, xOff float64, yOff float64) {
-	// No locking needed (iteration is safe)
-	// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
-	// TODO: run in parallel
-
-	offset := vmath.Vec2i{int(xOff), int(yOff)}
-	for _, fn := range i.scrollEventFuncs {
-		fn(offset)
-	}
+	i.pushEvent(func() {
+		offset := vmath.Vec2i{int(xOff), int(yOff)}
+		// No locking needed (iteration is safe)
+		// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
+		for _, fn := range i.scrollEventFuncs {
+			fn(offset)
+		}
+	})
 }
 
-// Executes the 'onKey' callback of every interactive component
+// Buffers the 'onKey' callback of every interactive component.
+// This function is called by glfw from the OS thread / renderThread.
 func (i *InteractionSystem) keyCallback(_ *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 	switch action {
 	case glfw.Press:
@@ -306,11 +335,11 @@ func (i *InteractionSystem) keyCallback(_ *glfw.Window, key glfw.Key, scancode i
 		assert.True(i.IsKeyPressed(key), "Key state inconsistent with events")
 	}
 
-	// No locking needed (iteration is safe)
-	// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
-	// TODO: run in parallel
-
-	for _, fn := range i.keyEventFuncs {
-		fn(key, scancode, action, mods)
-	}
+	i.pushEvent(func() {
+		// No locking needed (iteration is safe)
+		// If components are added/removed from within callbacks, it's unspecified if they receive the event that triggered the removal.
+		for _, fn := range i.keyEventFuncs {
+			fn(key, scancode, action, mods)
+		}
+	})
 }

@@ -44,8 +44,7 @@ func NewMesh(mat *Material) *Mesh {
 
 // Destroy deletes all resources associated with the mesh
 func (m *Mesh) Destroy() {
-	gl.DeleteBuffer(m.vbo)
-	gl.DeleteBuffer(m.ibo)
+	gl.DeleteBuffers(m.vbo, m.ibo)
 }
 
 // Material returns the underlying material

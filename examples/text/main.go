@@ -70,14 +70,12 @@ func run() error {
 
 	var mode gl.Enum = gl.FILL
 	engine.InteractionSystem.OnKey(glfw.KeySpace, glfw.Press, func(key glfw.ModifierKey) {
-		go func() { // calling gl functions within a key-callback is currently not possible
-			if mode == gl.FILL {
-				mode = gl.LINE
-			} else {
-				mode = gl.FILL
-			}
-			gl.PolygonMode(mode)
-		}()
+		if mode == gl.FILL {
+			mode = gl.LINE
+		} else {
+			mode = gl.FILL
+		}
+		gl.PolygonMode(mode)
 	})
 
 	stop := false

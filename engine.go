@@ -248,8 +248,11 @@ func (n *Engine) renderFrame(frameFunc DrawFrameFunc) bool {
 	n.window.SwapBuffers()
 	assert.NoGLError("Render frame %d", frame)
 	n.renderStats.Store(renderStats)
-	renderThread.Sync()
-	glfw.PollEvents()
+
+	glfw.PollEvents() // after buffer-swapping, as recommended by glfw
+	// PollEvents synchronizes with the render thread and blocks until all event callbacks have been processed/queued.
+	// This means we can now fire all events of the current frame and don't need to manually synchronize anymore.
+	n.InteractionSystem.FireEvents() // fire all queued events
 	return stop
 }
 
