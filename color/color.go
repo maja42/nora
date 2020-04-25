@@ -31,6 +31,18 @@ func (c Color) Grayscale() Color {
 	return HSL(0, 0, l)
 }
 
+// WithHue returns the color with its hue set to a specific level (0-1).
+func (c Color) WithHue(hue float32) Color {
+	_, s, l := c.HSL()
+	return HSL(hue, s, l)
+}
+
+// WithSaturation returns the color with its saturation set to a specific level (0-1).
+func (c Color) WithSaturation(saturation float32) Color {
+	h, _, l := c.HSL()
+	return HSL(h, saturation, l)
+}
+
 // WithBrightness returns the color with its luminosity set to a specific level (0-1).
 func (c Color) WithBrightness(luminosity float32) Color {
 	h, s, _ := c.HSL()

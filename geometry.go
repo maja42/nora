@@ -91,9 +91,9 @@ func AssertValidGeometry(sProgKey ShaderProgKey, vertexCount int, vertices []flo
 	} else {
 		assert.True(len(vertices) == 0, "VertexCount and vertex data does not match. Should there be vertices?")
 	}
-	// there must be attributes
-	assert.True(len(vertexAttributes) > 0, "There are no vertex attributes")
 	if vertexCount > 0 {
+		// there must be attributes
+		assert.True(len(vertexAttributes) > 0, "There are no vertex attributes")
 		// vertex size must be big enough for all the attributes
 		assert.True(vertexSize >= len(vertexAttributes), "Vertex size is too small to fit all vertex attributes") // zero-size attributes don't exist
 	}
@@ -169,7 +169,7 @@ func AssertValidGeometry(sProgKey ShaderProgKey, vertexCount int, vertices []flo
 		assert.True(ok, "Shader %q does not support vertex attribute %s", attr)
 	}
 	// Check missing attributes
-	if len(sProg.attributeTypes) > len(vertexAttributes) {
+	if vertexCount > 0 && len(sProg.attributeTypes) > len(vertexAttributes) {
 		assert.Fail("Shader %q has %d vertex attributes. Geometry only contains %d", sProgKey, len(sProg.attributeTypes), len(vertexAttributes))
 	}
 
