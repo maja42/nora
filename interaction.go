@@ -70,6 +70,13 @@ func (i *InteractionSystem) RemoveMouseMoveEventFunc(cbID CallbackID) {
 	delete(i.mouseMoveEventFuncs, cbID)
 }
 
+// MouseMoveCallbackCount returns the number of registered mouse move callbacks.
+func (i *InteractionSystem) MouseMoveCallbackCount() int {
+	i.m.Lock()
+	defer i.m.Unlock()
+	return len(i.mouseMoveEventFuncs)
+}
+
 // OnMouseButtonEvent adds a callback function to be executed on mouse button events.
 func (i *InteractionSystem) OnMouseButtonEvent(fn OnMouseButtonEventFunc) CallbackID {
 	id := CallbackID{i.idSeq.Inc()}
@@ -96,6 +103,13 @@ func (i *InteractionSystem) RemoveMouseButtonEventFunc(cbID CallbackID) {
 	delete(i.mouseButtonEventFuncs, cbID)
 }
 
+// MouseButtonCallbackCount returns the number of registered mouse button callbacks.
+func (i *InteractionSystem) MouseButtonCallbackCount() int {
+	i.m.Lock()
+	defer i.m.Unlock()
+	return len(i.mouseButtonEventFuncs)
+}
+
 // OnScroll adds a callback function to be executed on mouse scrolling events.
 func (i *InteractionSystem) OnScroll(fn OnScrollEventFunc) CallbackID {
 	id := CallbackID{i.idSeq.Inc()}
@@ -110,6 +124,13 @@ func (i *InteractionSystem) RemoveScrollEventFunc(cbID CallbackID) {
 	i.m.Lock()
 	defer i.m.Unlock()
 	delete(i.scrollEventFuncs, cbID)
+}
+
+// ScrollCallbackCount returns the number of registered scroll callbacks.
+func (i *InteractionSystem) ScrollCallbackCount() int {
+	i.m.Lock()
+	defer i.m.Unlock()
+	return len(i.scrollEventFuncs)
 }
 
 // OnKeyEvent adds a callback function to be executed on key events.
@@ -136,6 +157,13 @@ func (i *InteractionSystem) RemoveKeyEventFunc(cbID CallbackID) {
 	i.m.Lock()
 	defer i.m.Unlock()
 	delete(i.keyEventFuncs, cbID)
+}
+
+// KeyCallbackCount returns the number of registered key callbacks.
+func (i *InteractionSystem) KeyCallbackCount() int {
+	i.m.Lock()
+	defer i.m.Unlock()
+	return len(i.keyEventFuncs)
 }
 
 // RemoveAll removes all callback functions

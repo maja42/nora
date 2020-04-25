@@ -63,16 +63,36 @@ func (m *Line2D) Points() []vmath.Vec2f {
 	return m.points
 }
 
-// AddPoints appends additional waypoints to the line
+// Point returns the waypoint with the given index.
+// Panics if the index is out of bounds.
+func (m *Line2D) Point(idx int) vmath.Vec2f {
+	return m.points[idx]
+}
+
+// AddPoints appends additional waypoints to the line.
 func (m *Line2D) AddPoints(p ...vmath.Vec2f) {
 	m.points = append(m.points, p...)
 	m.dirty = true
+}
+
+// RemovePoint removes a point from the line.
+func (m *Line2D) RemovePoint(idx int) bool {
+	if idx < 0 || idx >= len(m.points) {
+		return false
+	}
+	m.points = append(m.points[:idx], m.points[idx+1:]...)
+	m.dirty = true
+	return true
 }
 
 // ClearPoints removes all points.
 func (m *Line2D) ClearPoints() {
 	m.points = nil
 	m.dirty = true
+}
+
+func (m *Line2D) Length() int {
+	return len(m.points)
 }
 
 // Color returns the line's color.

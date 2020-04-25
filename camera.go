@@ -245,9 +245,15 @@ func (c *OrthoCamera) WorldSpaceDistToClipSpaceDist(worldSpaceDist vmath.Vec2f) 
 }
 
 // Matrix returns the view-projection matrix and its change-counter.
-// The change-counter must be incremented every time camera properties are modified.
+// The change-counter gets incremented every time camera properties are modified.
 func (c *OrthoCamera) Matrix() (vmath.Mat4f, int) {
 	return c.vpMatrix, c.dirtyCount
+}
+
+// InverseMatrix returns the inverse view-projection matrix and its change-counter.
+// The change-counter gets incremented every time camera properties are modified.
+func (c *OrthoCamera) InverseMatrix() (vmath.Mat4f, int) {
+	return c.inverseVMMatrix, c.dirtyCount
 }
 
 // DirtyCount returns a counter that is incremented every time the camera is modified.
