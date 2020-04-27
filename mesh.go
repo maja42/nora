@@ -5,7 +5,6 @@ import (
 
 	"github.com/maja42/gl"
 	"github.com/maja42/nora/assert"
-	"github.com/maja42/vmath"
 )
 
 // Mesh is the (only) low-level construct for rendering geometry, besides ReadableMesh.
@@ -181,14 +180,14 @@ func (m *Mesh) ClearVertexData() {
 	m.SetVertexData(0, []float32{}, nil, gl.TRIANGLES, []string{}, InterleavedBuffer)
 }
 
-// TransDraw temporarily applies a model transformation to the matrix stack for rendering the mesh.
-// Utility method.
-func (m *Mesh) TransDraw(renderState *RenderState, modelTransform vmath.Mat4f) {
-	renderState.TransformStack.Push()
-	renderState.TransformStack.MulRight(modelTransform)
-	m.Draw(renderState)
-	renderState.TransformStack.Pop()
-}
+//// TransDraw temporarily applies a model transformation to the matrix stack for rendering the mesh.
+//// Utility method.
+//func (m *Mesh) TransDraw(renderState *RenderState, modelTransform vmath.Mat4f) {
+//	renderState.TransformStack.Push()
+//	renderState.TransformStack.MulRight(modelTransform)
+//	m.Draw(renderState)
+//	renderState.TransformStack.Pop()
+//}
 
 // Draw renders the mesh.
 // The required material (shader, textures, uniforms) are applied and the buffers are bound for rendering.

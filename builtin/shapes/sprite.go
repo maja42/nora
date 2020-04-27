@@ -49,5 +49,7 @@ func (m *Sprite) Destroy() {
 }
 
 func (m *Sprite) Draw(renderState *nora.RenderState) {
-	m.mesh.TransDraw(renderState, m.GetTransform())
+	renderState.TransformStack.PushMulRight(m.GetTransform())
+	m.mesh.Draw(renderState)
+	renderState.TransformStack.Pop()
 }

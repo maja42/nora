@@ -102,14 +102,6 @@ func (t *Terminal) CharPos(pos vmath.Vec2i) vmath.Vec2i {
 	return vmath.Vec2i{pos[0] * t.charSize[0], -(pos[1] + 1) * t.lineSpacing}
 }
 
-func (t *Terminal) Destroy() {
-	t.mesh.Destroy()
-}
-
-func (t *Terminal) Draw(renderState *nora.RenderState) {
-	t.mesh.TransDraw(renderState, t.GetTransform())
-}
-
 func (t *Terminal) SetRune(pos vmath.Vec2i, r rune) {
 	runeIdx := pos[0] + pos[1]*t.size[0]
 	t.text[runeIdx] = r
@@ -135,4 +127,14 @@ func (t *Terminal) SetRune(pos vmath.Vec2i, r rune) {
 		/*xy*/ xl, yt /*uv*/, tl[0], tl[1],
 	}
 	t.mesh.SetVertexSubData(int(t.vtxIndex(pos)), vtxData)
+}
+
+func (t *Terminal) Destroy() {
+	t.mesh.Destroy()
+}
+
+func (t *Terminal) Draw(renderState *nora.RenderState) {
+	renderState.TransformStack.PushMulRight(t.GetTransform())
+	t.mesh.Draw(renderState)
+	renderState.TransformStack.Pop()
 }

@@ -190,11 +190,9 @@ func (m *Text) Color() color.Color {
 }
 
 func (m *Text) Draw(renderState *nora.RenderState) {
-	m.mesh.TransDraw(renderState, m.GetTransform())
-}
-
-func (m *Text) TransDraw(renderState *nora.RenderState, transform vmath.Mat4f) {
-	m.mesh.TransDraw(renderState, m.GetTransform().Mul(transform))
+	renderState.TransformStack.PushMulRight(m.GetTransform())
+	m.mesh.Draw(renderState)
+	renderState.TransformStack.Pop()
 }
 
 func (m *Text) String() string {

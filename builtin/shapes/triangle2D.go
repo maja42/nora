@@ -39,5 +39,7 @@ func (m *Triangle2D) SetColor(c color.Color) {
 }
 
 func (m *Triangle2D) Draw(renderState *nora.RenderState) {
-	m.mesh.TransDraw(renderState, m.GetTransform())
+	renderState.TransformStack.PushMulRight(m.GetTransform())
+	m.mesh.Draw(renderState)
+	renderState.TransformStack.Pop()
 }

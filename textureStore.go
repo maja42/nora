@@ -67,7 +67,7 @@ func (s *TextureStore) Destroy() {
 }
 
 // StartHotReloading monitors the filesystem and reloads textures if their source files are modified.
-// Runs until the given context is canceled.
+// Blocks until hot-reloading is stopped due to context cancellation or because of a shutdown (destroy).
 func (s *TextureStore) StartHotReloading(ctx context.Context) error {
 	s.m.Lock()
 	if s.cancelHotReloading != nil {

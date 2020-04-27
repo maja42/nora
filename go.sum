@@ -34,8 +34,8 @@ github.com/maja42/glfw v0.0.0-20200423091646-f63f34d6e110 h1:dxlaarZxqKu6wgld85x
 github.com/maja42/glfw v0.0.0-20200423091646-f63f34d6e110/go.mod h1:HdJTO7PLoh2twAizXImi5iE1UhJXtZ1E5I+RBJE1DTA=
 github.com/maja42/glfw v0.0.0-20200425201231-b4f1c2b6f895 h1:0+fwc+IqO1rRSmuguz35cGJajLsmMx9oFawcopHdQyI=
 github.com/maja42/glfw v0.0.0-20200425201231-b4f1c2b6f895/go.mod h1:0yl/o2dMfDK6YQN5sXeJAmfV5mcLLg7c4uvmggkf2uU=
-github.com/maja42/vmath v0.0.0-20200424165017-e5aada304484 h1:0V6qx9k2F1t7rgg1WFp2pZVs0HjZ7n1HBQxZqYLC++A=
-github.com/maja42/vmath v0.0.0-20200424165017-e5aada304484/go.mod h1:NjRXeKA3CpAWp+tjzTI4d7eJYbrnKTJhEojfPDoJ2yU=
+github.com/maja42/vmath v0.0.0-20200427154541-8d10eba29da1 h1:l6BQBj4isZZljCOGCJsjZUrI9FLB6Otw/0ojI/ruX/o=
+github.com/maja42/vmath v0.0.0-20200427154541-8d10eba29da1/go.mod h1:NjRXeKA3CpAWp+tjzTI4d7eJYbrnKTJhEojfPDoJ2yU=
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/neelance/astrewrite v0.0.0-20160511093645-99348263ae86/go.mod h1:kHJEU3ofeGjhHklVoIGuVj85JJwZ6kWPaJwCIxgnFmo=

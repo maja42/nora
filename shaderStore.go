@@ -64,7 +64,7 @@ func (s *ShaderStore) Destroy() {
 }
 
 // StartHotReloading monitors the filesystem and reloads shader programs if their source files are modified.
-// Blocks until the given context is canceled.
+// Blocks until hot-reloading is stopped due to context cancellation or because of a shutdown (destroy).
 func (s *ShaderStore) StartHotReloading(ctx context.Context) error {
 	s.m.Lock()
 	if s.cancelHotReloading != nil {

@@ -110,7 +110,9 @@ func (m *Line2D) Draw(renderState *nora.RenderState) {
 	if m.dirty {
 		m.update()
 	}
-	m.mesh.TransDraw(renderState, m.GetTransform())
+	renderState.TransformStack.PushMulRight(m.GetTransform())
+	m.mesh.Draw(renderState)
+	renderState.TransformStack.Pop()
 }
 
 func (m *Line2D) update() {
