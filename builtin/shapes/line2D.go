@@ -85,6 +85,15 @@ func (m *Line2D) RemovePoint(idx int) bool {
 	return true
 }
 
+// RemoveLastPoints removes a last n points from the line.
+// Returns the number of points actually removed.
+func (m *Line2D) RemoveLastPoints(count int) int {
+	count = vmath.Mini(count, len(m.points))
+	m.points = m.points[:len(m.points)-count]
+	m.dirty = true
+	return count
+}
+
 // ClearPoints removes all points.
 func (m *Line2D) ClearPoints() {
 	m.points = nil

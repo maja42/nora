@@ -43,7 +43,7 @@ func (g *Geometry) Append(vertexCount int, vertices []float32, indices []uint16,
 	}
 	AssertValidGeometry("", vertexCount, vertices, indices, primitiveType, vertexAttributes)
 
-	assert.True(g.primitiveType == primitiveType, "Incompatible primitive type")
+	assert.True(g.primitiveType == primitiveType, "Incompatible primitive type %s<=>%s", g.primitiveType, primitiveType)
 	assert.True(equalStringSlice(g.vertexAttributes, vertexAttributes), "Incompatible vertex attributes: %v <> %v", g.vertexAttributes, vertexAttributes)
 	assert.True(g.vertexCount+vertexCount <= 0xFFFF, "Resulting geometry is not indexable by uint16")
 
