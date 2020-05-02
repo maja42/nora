@@ -3,6 +3,7 @@ package shapes
 import (
 	"github.com/maja42/gl"
 	"github.com/maja42/nora"
+	"github.com/maja42/nora/assert"
 	"github.com/maja42/nora/builtin/shader"
 	"github.com/maja42/nora/color"
 	"github.com/maja42/vmath"
@@ -66,12 +67,28 @@ func (m *Line2D) Points() []vmath.Vec2f {
 // Point returns the waypoint with the given index.
 // Panics if the index is out of bounds.
 func (m *Line2D) Point(idx int) vmath.Vec2f {
+	assert.True(idx >= 0 && idx < len(m.points), "index out of range")
 	return m.points[idx]
+}
+
+// SetPoint changes the position of an existing waypoint.
+// Panics if the index is out of bounds.
+func (m *Line2D) SetPoint(idx int, p vmath.Vec2f) {
+	assert.True(idx >= 0 && idx < len(m.points), "index out of range")
+	m.points[idx] = p
+	m.dirty = true
 }
 
 // AddPoints appends additional waypoints to the line.
 func (m *Line2D) AddPoints(p ...vmath.Vec2f) {
 	m.points = append(m.points, p...)
+	m.dirty = true
+}
+
+// AddPointsAtFront appends additional waypoints to the beginning of the line.
+// The order of the given points stays the same
+func (m *Line2D) AddPointsAtFront(p ...vmath.Vec2f) {
+	m.points = append(p, m.points...)
 	m.dirty = true
 }
 
@@ -92,6 +109,19 @@ func (m *Line2D) RemoveLastPoints(count int) int {
 	m.points = m.points[:len(m.points)-count]
 	m.dirty = true
 	return count
+}
+
+// Reverse reverses the line.
+// This flips all positions.
+func (m *Line2D) Reverse() {
+	p := m.points
+
+	left := 0
+	right := len(p) - 1
+	for ; left < right; left, right = left+1, right-1 {
+		p[left], p[right] = p[right], p[left]
+	}
+	m.dirty = true
 }
 
 // ClearPoints removes all points.
