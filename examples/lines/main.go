@@ -6,6 +6,7 @@ import (
 	"github.com/maja42/gl"
 	"github.com/maja42/glfw"
 	"github.com/maja42/nora"
+	"github.com/maja42/nora/builtin/geometry/geo2d"
 	"github.com/maja42/nora/builtin/shader"
 	"github.com/maja42/nora/builtin/shapes"
 	"github.com/maja42/nora/color"
@@ -45,7 +46,7 @@ func run() error {
 
 	engine.SetClearColor(color.Gray(0.1))
 
-	line1 := shapes.NewLine2D(0.06, shapes.BevelJoint, true)
+	line1 := shapes.NewLineStrip2D(0.06, geo2d.BevelJoint, true)
 	line1.SetColor(color.Gray(0.6))
 	line1.AddPoints([]vmath.Vec2f{
 		{0, 0},
@@ -55,7 +56,7 @@ func run() error {
 		{0.5, 0.45},
 	}...)
 
-	line2 := shapes.NewLine2D(0.06, shapes.MitterJoint, true)
+	line2 := shapes.NewLineStrip2D(0.06, geo2d.MitterJoint, true)
 	line2.SetColor(color.Gray(0.6))
 	line2.AddPoints([]vmath.Vec2f{
 		{-0.1, 0},
@@ -65,7 +66,7 @@ func run() error {
 		{0.4, 0.45},
 	}...)
 
-	line3 := shapes.NewLine2D(0.006, shapes.MitterJoint, true)
+	line3 := shapes.NewLineStrip2D(0.006, geo2d.MitterJoint, true)
 	line3.SetColor(color.Gray(0.6))
 	line3.AddPoints([]vmath.Vec2f{
 		{-0.122, 0.05},

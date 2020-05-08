@@ -9,7 +9,7 @@ import (
 	"github.com/maja42/vmath"
 )
 
-type Line2D struct {
+type LineStrip2D struct {
 	nora.Transform
 	mesh nora.Mesh
 
@@ -22,10 +22,10 @@ type Line2D struct {
 	dirty  bool
 }
 
-func NewLine2D(thickness float32, lineJoint geo2d.LineJoint, loop bool) *Line2D {
+func NewLineStrip2D(thickness float32, lineJoint geo2d.LineJoint, loop bool) *LineStrip2D {
 	mat := nora.NewMaterial(shader.COL_2D)
 
-	s := &Line2D{
+	s := &LineStrip2D{
 		mesh: *nora.NewMesh(mat),
 	}
 	s.ClearTransform()
@@ -34,17 +34,17 @@ func NewLine2D(thickness float32, lineJoint geo2d.LineJoint, loop bool) *Line2D 
 	return s
 }
 
-func (m *Line2D) Destroy() {
+func (m *LineStrip2D) Destroy() {
 	m.mesh.Destroy()
 }
 
 // Properties returns the line's thickness, the joint type and if it's a loop.
-func (m *Line2D) Properties() (float32, geo2d.LineJoint, bool) {
+func (m *LineStrip2D) Properties() (float32, geo2d.LineJoint, bool) {
 	return m.thickness, m.lineJoint, m.loop
 }
 
 // SetProperties changes the thickness, joint type and if the line loops back.
-func (m *Line2D) SetProperties(thickness float32, lineJoint geo2d.LineJoint, loop bool) {
+func (m *LineStrip2D) SetProperties(thickness float32, lineJoint geo2d.LineJoint, loop bool) {
 	m.thickness = thickness
 	m.lineJoint = lineJoint
 	m.loop = loop
@@ -53,40 +53,40 @@ func (m *Line2D) SetProperties(thickness float32, lineJoint geo2d.LineJoint, loo
 
 // Points returns all waypoints of the line.
 // The caller must not modify the returned data.
-func (m *Line2D) Points() []vmath.Vec2f {
+func (m *LineStrip2D) Points() []vmath.Vec2f {
 	return m.points
 }
 
 // Point returns the waypoint with the given index.
 // Panics if the index is out of bounds.
-func (m *Line2D) Point(idx int) vmath.Vec2f {
+func (m *LineStrip2D) Point(idx int) vmath.Vec2f {
 	assert.True(idx >= 0 && idx < len(m.points), "index out of range")
 	return m.points[idx]
 }
 
 // SetPoint changes the position of an existing waypoint.
 // Panics if the index is out of bounds.
-func (m *Line2D) SetPoint(idx int, p vmath.Vec2f) {
+func (m *LineStrip2D) SetPoint(idx int, p vmath.Vec2f) {
 	assert.True(idx >= 0 && idx < len(m.points), "index out of range")
 	m.points[idx] = p
 	m.dirty = true
 }
 
 // AddPoints appends additional waypoints to the line.
-func (m *Line2D) AddPoints(p ...vmath.Vec2f) {
+func (m *LineStrip2D) AddPoints(p ...vmath.Vec2f) {
 	m.points = append(m.points, p...)
 	m.dirty = true
 }
 
 // AddPointsAtFront appends additional waypoints to the beginning of the line.
 // The order of the given points stays the same
-func (m *Line2D) AddPointsAtFront(p ...vmath.Vec2f) {
+func (m *LineStrip2D) AddPointsAtFront(p ...vmath.Vec2f) {
 	m.points = append(p, m.points...)
 	m.dirty = true
 }
 
 // AddPointAtIdx adds an additional waypoint at any position of the line.
-func (m *Line2D) AddPointAtIdx(idx int, p vmath.Vec2f) {
+func (m *LineStrip2D) AddPointAtIdx(idx int, p vmath.Vec2f) {
 	assert.True(idx >= 0 && idx < len(m.points), "index out of range")
 
 	// make sure there's enough space:
@@ -97,7 +97,7 @@ func (m *Line2D) AddPointAtIdx(idx int, p vmath.Vec2f) {
 }
 
 // RemovePoint removes a point from the line.
-func (m *Line2D) RemovePoint(idx int) bool {
+func (m *LineStrip2D) RemovePoint(idx int) bool {
 	if idx < 0 || idx >= len(m.points) {
 		return false
 	}
@@ -108,7 +108,7 @@ func (m *Line2D) RemovePoint(idx int) bool {
 
 // RemoveLastPoints removes a last n points from the line.
 // Returns the number of points actually removed.
-func (m *Line2D) RemoveLastPoints(count int) int {
+func (m *LineStrip2D) RemoveLastPoints(count int) int {
 	count = vmath.Mini(count, len(m.points))
 	m.points = m.points[:len(m.points)-count]
 	m.dirty = true
@@ -117,7 +117,7 @@ func (m *Line2D) RemoveLastPoints(count int) int {
 
 // Reverse reverses the line.
 // This flips all positions.
-func (m *Line2D) Reverse() {
+func (m *LineStrip2D) Reverse() {
 	p := m.points
 
 	left := 0
@@ -129,27 +129,27 @@ func (m *Line2D) Reverse() {
 }
 
 // ClearPoints removes all points.
-func (m *Line2D) ClearPoints() {
+func (m *LineStrip2D) ClearPoints() {
 	m.points = nil
 	m.dirty = true
 }
 
-func (m *Line2D) Length() int {
+func (m *LineStrip2D) Length() int {
 	return len(m.points)
 }
 
 // Color returns the line's color.
-func (m *Line2D) Color() color.Color {
+func (m *LineStrip2D) Color() color.Color {
 	return m.color
 }
 
 // SetColor changes the line color.
-func (m *Line2D) SetColor(c color.Color) {
+func (m *LineStrip2D) SetColor(c color.Color) {
 	m.color = c
 	m.mesh.Material().Uniform4fColor("fragColor", c)
 }
 
-func (m *Line2D) Draw(renderState *nora.RenderState) {
+func (m *LineStrip2D) Draw(renderState *nora.RenderState) {
 	if m.dirty {
 		m.update()
 	}
@@ -158,8 +158,8 @@ func (m *Line2D) Draw(renderState *nora.RenderState) {
 	renderState.TransformStack.Pop()
 }
 
-func (m *Line2D) update() {
-	geometry := geo2d.Line(m.points, m.loop, m.thickness, m.lineJoint)
+func (m *LineStrip2D) update() {
+	geometry := geo2d.LineStrip(m.points, m.loop, m.thickness, m.lineJoint)
 	m.mesh.SetGeometry(geometry)
 	m.dirty = false
 }

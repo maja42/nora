@@ -13,8 +13,8 @@ const (
 	BevelJoint
 )
 
-// Line creates a line following the given points.
-func Line(points []vmath.Vec2f, loop bool, thickness float32, lineJoint LineJoint) *nora.Geometry {
+// LineStrip creates a line following the given points.
+func LineStrip(points []vmath.Vec2f, loop bool, thickness float32, lineJoint LineJoint) *nora.Geometry {
 	switch lineJoint {
 	case BevelJoint:
 		return bevelJointLine(points, loop, thickness)
