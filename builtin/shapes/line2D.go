@@ -3,7 +3,7 @@ package shapes
 import (
 	"github.com/maja42/nora"
 	"github.com/maja42/nora/assert"
-	"github.com/maja42/nora/builtin/geom"
+	"github.com/maja42/nora/builtin/geometry/geo2d"
 	"github.com/maja42/nora/builtin/shader"
 	"github.com/maja42/nora/color"
 	"github.com/maja42/vmath"
@@ -14,7 +14,7 @@ type Line2D struct {
 	mesh nora.Mesh
 
 	thickness float32
-	lineJoint geom.LineJoint
+	lineJoint geo2d.LineJoint
 	loop      bool
 	color     color.Color
 
@@ -22,7 +22,7 @@ type Line2D struct {
 	dirty  bool
 }
 
-func NewLine2D(thickness float32, lineJoint geom.LineJoint, loop bool) *Line2D {
+func NewLine2D(thickness float32, lineJoint geo2d.LineJoint, loop bool) *Line2D {
 	mat := nora.NewMaterial(shader.COL_2D)
 
 	s := &Line2D{
@@ -39,12 +39,12 @@ func (m *Line2D) Destroy() {
 }
 
 // Properties returns the line's thickness, the joint type and if it's a loop.
-func (m *Line2D) Properties() (float32, geom.LineJoint, bool) {
+func (m *Line2D) Properties() (float32, geo2d.LineJoint, bool) {
 	return m.thickness, m.lineJoint, m.loop
 }
 
 // SetProperties changes the thickness, joint type and if the line loops back.
-func (m *Line2D) SetProperties(thickness float32, lineJoint geom.LineJoint, loop bool) {
+func (m *Line2D) SetProperties(thickness float32, lineJoint geo2d.LineJoint, loop bool) {
 	m.thickness = thickness
 	m.lineJoint = lineJoint
 	m.loop = loop
@@ -159,7 +159,7 @@ func (m *Line2D) Draw(renderState *nora.RenderState) {
 }
 
 func (m *Line2D) update() {
-	geometry := geom.Line2D(m.points, m.loop, m.thickness, m.lineJoint)
+	geometry := geo2d.Line(m.points, m.loop, m.thickness, m.lineJoint)
 	m.mesh.SetGeometry(geometry)
 	m.dirty = false
 }

@@ -1,4 +1,4 @@
-package geom
+package geo2d
 
 import (
 	"github.com/maja42/gl"
@@ -13,18 +13,18 @@ const (
 	BevelJoint
 )
 
-// Line2D creates a line following the given points.
-func Line2D(points []vmath.Vec2f, loop bool, thickness float32, lineJoint LineJoint) *nora.Geometry {
+// Line creates a line following the given points.
+func Line(points []vmath.Vec2f, loop bool, thickness float32, lineJoint LineJoint) *nora.Geometry {
 	switch lineJoint {
 	case BevelJoint:
-		return bevelJointLine2D(points, loop, thickness)
+		return bevelJointLine(points, loop, thickness)
 	case MitterJoint:
-		return miterJointLine2D(points, loop, thickness)
+		return miterJointLine(points, loop, thickness)
 	}
 	return nil
 }
 
-func bevelJointLine2D(points []vmath.Vec2f, loop bool, thickness float32) *nora.Geometry {
+func bevelJointLine(points []vmath.Vec2f, loop bool, thickness float32) *nora.Geometry {
 	pointCnt := len(points)
 	if pointCnt < 2 {
 		return &nora.Geometry{}
@@ -69,7 +69,7 @@ func bevelJointLine2D(points []vmath.Vec2f, loop bool, thickness float32) *nora.
 	return nora.NewGeometry(vertexCount, vertices, nil, gl.TRIANGLE_STRIP, []string{"position"}, nora.CompactBuffer)
 }
 
-func miterJointLine2D(points []vmath.Vec2f, loop bool, thickness float32) *nora.Geometry {
+func miterJointLine(points []vmath.Vec2f, loop bool, thickness float32) *nora.Geometry {
 	pointCnt := len(points)
 	if pointCnt < 2 {
 		return &nora.Geometry{}
