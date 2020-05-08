@@ -18,6 +18,9 @@ type LineStrip2D struct {
 	loop      bool
 	color     color.Color
 
+	startCap geo2d.LineCap
+	endCap   geo2d.LineCap
+
 	points []vmath.Vec2f
 	dirty  bool
 }
@@ -26,7 +29,9 @@ func NewLineStrip2D(thickness float32, lineJoint geo2d.LineJoint, loop bool) *Li
 	mat := nora.NewMaterial(shader.COL_2D)
 
 	s := &LineStrip2D{
-		mesh: *nora.NewMesh(mat),
+		mesh:     *nora.NewMesh(mat),
+		startCap: geo2d.FlatLineCap,
+		endCap:   geo2d.FlatLineCap,
 	}
 	s.ClearTransform()
 	s.SetColor(color.White)
@@ -48,6 +53,13 @@ func (m *LineStrip2D) SetProperties(thickness float32, lineJoint geo2d.LineJoint
 	m.thickness = thickness
 	m.lineJoint = lineJoint
 	m.loop = loop
+	m.dirty = true
+}
+
+// SetProperties changes the thickness, joint type and if the line loops back.
+func (m *LineStrip2D) SetLineCaps(startCap, endCap geo2d.LineCap) {
+	m.startCap = startCap
+	m.endCap = endCap
 	m.dirty = true
 }
 
@@ -159,7 +171,7 @@ func (m *LineStrip2D) Draw(renderState *nora.RenderState) {
 }
 
 func (m *LineStrip2D) update() {
-	geometry := geo2d.LineStrip(m.points, m.loop, m.thickness, m.lineJoint)
+	geometry := geo2d.LineStrip(m.points, m.loop, m.thickness, m.lineJoint, m.startCap, m.endCap)
 	m.mesh.SetGeometry(geometry)
 	m.dirty = false
 }

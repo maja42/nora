@@ -46,35 +46,56 @@ func run() error {
 
 	engine.SetClearColor(color.Gray(0.1))
 
-	line1 := shapes.NewLineStrip2D(0.06, geo2d.BevelJoint, true)
-	line1.SetColor(color.Gray(0.6))
-	line1.AddPoints([]vmath.Vec2f{
+	lines := make([]*shapes.LineStrip2D, 0)
+
+	line := shapes.NewLineStrip2D(0.06, geo2d.BevelJoint, true)
+	line.SetColor(color.Gray(0.6))
+	line.AddPoints([]vmath.Vec2f{
 		{0, 0},
 		{1, 0},
 		{1, 0.9},
 		{0, 0.9},
 		{0.5, 0.45},
 	}...)
+	lines = append(lines, line)
 
-	line2 := shapes.NewLineStrip2D(0.06, geo2d.MitterJoint, true)
-	line2.SetColor(color.Gray(0.6))
-	line2.AddPoints([]vmath.Vec2f{
+	line = shapes.NewLineStrip2D(0.06, geo2d.MitterJoint, true)
+	line.SetColor(color.Gray(0.6))
+	line.AddPoints([]vmath.Vec2f{
 		{-0.1, 0},
 		{-1.1, 0},
 		{-1.1, 0.9},
 		{-0.1, 0.9},
 		{0.4, 0.45},
 	}...)
+	lines = append(lines, line)
 
-	line3 := shapes.NewLineStrip2D(0.006, geo2d.MitterJoint, true)
-	line3.SetColor(color.Gray(0.6))
-	line3.AddPoints([]vmath.Vec2f{
+	line = shapes.NewLineStrip2D(0.006, geo2d.MitterJoint, true)
+	line.SetColor(color.Gray(0.6))
+	line.AddPoints([]vmath.Vec2f{
 		{-0.122, 0.05},
 		{-1.05, 0.05},
 		{-1.05, 0.85},
 		{-0.122, 0.85},
 		{0.32, 0.45},
 	}...)
+	lines = append(lines, line)
+
+	caps := []geo2d.LineCap{
+		geo2d.FlatLineCap, geo2d.SquareLineCap, geo2d.TriangleLineCap,
+		geo2d.RoundLineCap(3),
+		geo2d.RoundLineCap(4),
+		geo2d.RoundLineCap(32)}
+
+	for idx, cap := range caps {
+		line := shapes.NewLineStrip2D(0.07, geo2d.BevelJoint, true)
+		line.SetColor(color.Gray(0.5))
+		y := -0.2 - float32(idx)*0.1
+		line.AddPoints(vmath.Vec2f{-1, y}, vmath.Vec2f{1, y})
+		line.SetLineCaps(cap, cap)
+
+		lines = append(lines, line)
+	}
 
 	var mode gl.Enum = gl.FILL
 	engine.InteractionSystem.OnKey(glfw.KeySpace, glfw.Press, func(key glfw.ModifierKey) {
@@ -94,9 +115,9 @@ func run() error {
 	})
 
 	engine.Render(func(elapsed time.Duration, renderState *nora.RenderState) bool {
-		line1.Draw(renderState)
-		line2.Draw(renderState)
-		line3.Draw(renderState)
+		for _, line := range lines {
+			line.Draw(renderState)
+		}
 		return stop
 	})
 	return nil

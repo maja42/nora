@@ -1,8 +1,11 @@
 package geo2d
 
 import (
+	"math"
+
 	"github.com/maja42/gl"
 	"github.com/maja42/nora"
+	"github.com/maja42/nora/assert"
 	"github.com/maja42/vmath"
 )
 
@@ -13,18 +16,55 @@ const (
 	BevelJoint
 )
 
-// LineStrip creates a line following the given points.
-func LineStrip(points []vmath.Vec2f, loop bool, thickness float32, lineJoint LineJoint) *nora.Geometry {
-	switch lineJoint {
-	case BevelJoint:
-		return bevelJointLine(points, loop, thickness)
-	case MitterJoint:
-		return miterJointLine(points, loop, thickness)
-	}
-	return nil
+type LineCap struct {
+	v int
 }
 
-func bevelJointLine(points []vmath.Vec2f, loop bool, thickness float32) *nora.Geometry {
+var (
+	FlatLineCap     = LineCap{0}
+	SquareLineCap   = LineCap{-1} // Extends the line by thickness/2
+	TriangleLineCap = LineCap{2}  // Same as a RoundLineCap with 2 segments
+)
+
+func RoundLineCap(segments int) LineCap {
+	assert.True(segments >= 2, "rounded line caps need at least 2 segments")
+	return LineCap{v: segments}
+}
+
+// LineStrip creates a line following the given points.
+func LineStrip(points []vmath.Vec2f, loop bool, thickness float32, lineJoint LineJoint, startCap, endCap LineCap) *nora.Geometry {
+	pointCnt := len(points)
+	if pointCnt <= 2 {
+		loop = false
+	}
+	if pointCnt < 2 || loop {
+		startCap, endCap = FlatLineCap, FlatLineCap
+	}
+
+	var geo *nora.Geometry
+	switch lineJoint {
+	case BevelJoint:
+		geo = bevelJointLine(points, loop, thickness, startCap == SquareLineCap, endCap == SquareLineCap)
+	case MitterJoint:
+		geo = miterJointLine(points, loop, thickness)
+	default:
+		assert.Fail("unknown line joint")
+		return nil
+	}
+
+	if startCap.v > 0 {
+		frontAngle := points[0].Sub(points[1]).FlatAngle()
+		geo = CircleSegment(points[0], thickness/2, startCap.v, -frontAngle, math.Pi).
+			AppendGeometry(geo)
+	}
+	if endCap.v > 0 {
+		backAngle := points[pointCnt-1].Sub(points[pointCnt-2]).FlatAngle()
+		geo.AppendGeometry(CircleSegment(points[len(points)-1], thickness/2, endCap.v, -backAngle, math.Pi))
+	}
+	return geo
+}
+
+func bevelJointLine(points []vmath.Vec2f, loop bool, thickness float32, squareCapStart, squareCapEnd bool) *nora.Geometry {
 	pointCnt := len(points)
 	if pointCnt < 2 {
 		return &nora.Geometry{}
@@ -47,6 +87,16 @@ func bevelJointLine(points []vmath.Vec2f, loop bool, thickness float32) *nora.Ge
 		end := points[(l+1)%pointCnt]
 
 		line := vmath.Vec2f{end[0] - start[0], end[1] - start[1]}
+
+		if l == 0 && squareCapStart {
+			cap := line.Normalize().MulScalar(thickness / 2)
+			start = start.Sub(cap)
+		}
+		if l == lineSegments-1 && squareCapEnd {
+			cap := line.Normalize().MulScalar(thickness / 2)
+			end = end.Add(cap)
+		}
+
 		norm := vmath.Vec2f{-line[1], line[0]}
 		norm = norm.Normalize()
 		norm = norm.MulScalar(thickness / 2)
@@ -65,7 +115,6 @@ func bevelJointLine(points []vmath.Vec2f, loop bool, thickness float32) *nora.Ge
 			vertices[2], vertices[3],
 		})
 	}
-
 	return nora.NewGeometry(vertexCount, vertices, nil, gl.TRIANGLE_STRIP, []string{"position"}, nora.CompactBuffer)
 }
 

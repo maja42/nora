@@ -36,10 +36,10 @@ func (g *Geometry) Set(vertexCount int, vertices []float32, indices []uint16, pr
 }
 
 // Append merges new geometry at the end of the current one.
-func (g *Geometry) Append(vertexCount int, vertices []float32, indices []uint16, primitiveType PrimitiveType, vertexAttributes []string, bufferLayout BufferLayout) {
+func (g *Geometry) Append(vertexCount int, vertices []float32, indices []uint16, primitiveType PrimitiveType, vertexAttributes []string, bufferLayout BufferLayout) *Geometry {
 	if g.vertexCount == 0 {
 		g.Set(vertexCount, vertices, indices, primitiveType, vertexAttributes, bufferLayout)
-		return
+		return g
 	}
 	AssertValidGeometry("", vertexCount, vertices, indices, primitiveType, vertexAttributes)
 
@@ -65,12 +65,20 @@ func (g *Geometry) Append(vertexCount int, vertices []float32, indices []uint16,
 
 			g.vertices = append(g.vertices, lastVertex...)
 			g.vertices = append(g.vertices, firstVertex...)
+			if g.vertexCount%2 != 0 {
+				// add another vertex to keep the winding order consistent
+				g.vertices = append(g.vertices, firstVertex...)
+			}
 		} else { // duplicate indices
 			lastIdx := uint16(0) //g.indices[len(g.indices)-1]
 			firstIdx := indices[0] + uint16(g.vertexCount)
 			g.indices = append(g.indices, lastIdx, firstIdx)
+			if g.vertexCount%2 != 0 {
+				// add another vertex to keep the winding order consistent
+				g.indices = append(g.indices, firstIdx)
+			}
 		}
-		g.vertexCount += 2
+		g.vertexCount += 2 + g.vertexCount%2
 	}
 
 	firstIdx := len(g.indices)
@@ -81,11 +89,13 @@ func (g *Geometry) Append(vertexCount int, vertices []float32, indices []uint16,
 		g.indices[i] += uint16(g.vertexCount)
 	}
 	g.vertexCount += vertexCount
+	return g
 }
 
 // AppendGeometry merges new geometry at the end of the current one.
-func (g *Geometry) AppendGeometry(other *Geometry) {
+func (g *Geometry) AppendGeometry(other *Geometry) *Geometry {
 	g.Append(other.vertexCount, other.vertices, other.indices, other.primitiveType, other.vertexAttributes, other.bufferLayout)
+	return g
 }
 
 func equalStringSlice(a, b []string) bool {
