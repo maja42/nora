@@ -45,12 +45,33 @@ func (g *Geometry) Append(vertexCount int, vertices []float32, indices []uint16,
 
 	assert.True(g.primitiveType == primitiveType, "Incompatible primitive type %s<=>%s", g.primitiveType, primitiveType)
 	assert.True(equalStringSlice(g.vertexAttributes, vertexAttributes), "Incompatible vertex attributes: %v <> %v", g.vertexAttributes, vertexAttributes)
-	assert.True(g.vertexCount+vertexCount <= 0xFFFF, "Resulting geometry is not indexable by uint16")
+	assert.True(g.vertexCount+vertexCount+2 <= 0xFFFF, "Resulting geometry is not indexable by uint16") // +2 for possible degenerate triangles
+	assert.True((g.indices != nil) == (indices != nil), "Incompatible indexed-drawing property")
 
 	// Support could be added for some of the following cases:
-	assert.True(g.bufferLayout == bufferLayout, "Incompatible buffer layouts")                                                          // solvable by splicing the vertex array
-	assert.True(bufferLayout == InterleavedBuffer, "Unsupported buffer layout")                                                         // solvable by splicing the vertex array
-	assert.True(primitiveType == gl.POINTS || primitiveType == gl.LINES || primitiveType == gl.TRIANGLES, "Unsupported primitive type") // solvable by adding degenerate triangles
+
+	if len(vertexAttributes) > 1 { // check buffer layout for compatibility
+		assert.True(g.bufferLayout == bufferLayout, "Incompatible buffer layouts")  // solvable by splicing the vertex array
+		assert.True(bufferLayout == InterleavedBuffer, "Unsupported buffer layout") // solvable by splicing the vertex array
+	}
+	assert.True(primitiveType == gl.POINTS || primitiveType == gl.LINES || primitiveType == gl.TRIANGLES || primitiveType == gl.TRIANGLE_STRIP, "Unsupported primitive type") // solvable by adding degenerate triangles
+
+	if primitiveType == gl.TRIANGLE_STRIP {
+		// create degenerate triangles by duplicating the two vertices at the merge point
+		if indices == nil { // duplicate vertices
+			vertexSize := len(vertices) / vertexCount
+			lastVertex := g.vertices[len(g.vertices)-vertexSize:]
+			firstVertex := vertices[:vertexSize]
+
+			g.vertices = append(g.vertices, lastVertex...)
+			g.vertices = append(g.vertices, firstVertex...)
+		} else { // duplicate indices
+			lastIdx := uint16(0) //g.indices[len(g.indices)-1]
+			firstIdx := indices[0] + uint16(g.vertexCount)
+			g.indices = append(g.indices, lastIdx, firstIdx)
+		}
+		g.vertexCount += 2
+	}
 
 	firstIdx := len(g.indices)
 	g.vertices = append(g.vertices, vertices...)
