@@ -125,6 +125,18 @@ var Yellow = Color{1.0, 1.0, 0.0, 1.0}
 var Cyan = Color{0.0, 1.0, 1.0, 1.0}
 var Magenta = Color{1.0, 0.0, 1.0, 1.0}
 
+// Dark variants
+var DarkRed = MustHex("800000")
+var DarkGreen = MustHex("008000")
+var DarkBlue = MustHex("000080")
+
+var DarkYellow = MustHex("808000")
+var DarkCyan = MustHex("008080")
+var DarkMagenta = MustHex("800080")
+
+// Additional colors
+var Orange = MustHex("FFA500")
+
 // Hex returns a color from a hex-string.
 // The hex string can be upper- or lower case.
 // Supports 6- and 8-character strings (alpha is optional), as well as 3- and 4-character short-strings
@@ -168,7 +180,7 @@ func MustHex(s string) Color {
 	return c
 }
 
-// RGB returns a color with 100% opacity
+// RGB returns a color with 100% opacity.
 func RGB(r, g, b float32) Color {
 	return Color{
 		R: r,
@@ -178,8 +190,23 @@ func RGB(r, g, b float32) Color {
 	}
 }
 
-// HSL returns a color based on hue, saturation, luminosity with 100% opacity
+// RGBA returns a color with the given opacity.
+func RGBA(r, g, b, a float32) Color {
+	return Color{
+		R: r,
+		G: g,
+		B: b,
+		A: a,
+	}
+}
+
+// HSL returns a color based on hue, saturation, luminosity with 100% opacity.
 func HSL(hue, saturation, luminosity float32) Color {
+	return HSLA(hue, saturation, luminosity, 1)
+}
+
+// HSL returns a color based on hue, saturation, luminosity with the given opacity.
+func HSLA(hue, saturation, luminosity, alpha float32) Color {
 	// Based on: https://github.com/gerow/go-color
 
 	if saturation == 0 { // gray
@@ -199,7 +226,7 @@ func HSL(hue, saturation, luminosity float32) Color {
 	g := hueToRGB(v1, v2, hue)
 	b := hueToRGB(v1, v2, hue-(1.0/3.0))
 
-	return Color{r, g, b, 1}
+	return Color{r, g, b, alpha}
 }
 
 func hueToRGB(v1, v2, h float32) float32 {
@@ -220,7 +247,7 @@ func hueToRGB(v1, v2, h float32) float32 {
 	return v1
 }
 
-// Gray returns a color with the given brightness and 100% opacity
+// Gray returns a color with the given brightness and 100% opacity.
 func Gray(brightness float32) Color {
 	return Color{
 		R: brightness,
