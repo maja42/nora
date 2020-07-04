@@ -133,20 +133,20 @@ func (t *Transform) SetAxisRotation(rad float32, axis vmath.Vec3f) {
 
 // SetRotationX sets the object's rotation around the x-axis. Resets all other rotations.
 func (t *Transform) SetRotationX(rad float32) {
-	t.rotation = vmath.QuatFromAxisAngle(vmath.XVec3f(), rad)
+	t.rotation = vmath.QuatFromAxisAngle(vmath.Vec3f{1, 0, 0}, rad)
 	t.transformDirty, t.inverseDirty = true, true
 }
 
 // SetRotationY sets the object's rotation around the y-axis. Resets all other rotations.
 func (t *Transform) SetRotationY(rad float32) {
-	t.rotation = vmath.QuatFromAxisAngle(vmath.YVec3f(), rad)
+	t.rotation = vmath.QuatFromAxisAngle(vmath.Vec3f{0, 1, 0}, rad)
 	t.transformDirty, t.inverseDirty = true, true
 }
 
 // SetRotationZ sets the object's rotation around the z-axis. Resets all other rotations.
 // Used for 2D rotations.
 func (t *Transform) SetRotationZ(rad float32) {
-	t.rotation = vmath.QuatFromAxisAngle(vmath.ZVec3f(), rad)
+	t.rotation = vmath.QuatFromAxisAngle(vmath.Vec3f{0, 0, 1}, rad)
 	t.transformDirty, t.inverseDirty = true, true
 }
 

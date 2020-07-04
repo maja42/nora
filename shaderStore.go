@@ -84,7 +84,7 @@ func (s *ShaderStore) StartHotReloading(ctx context.Context) error {
 		}
 	})
 	if err != nil {
-		logrus.Warn("Failed to perform shader hot-reloading: %s", err)
+		logrus.Warnf("Failed to perform shader hot-reloading: %s", err)
 	}
 	return nil
 }

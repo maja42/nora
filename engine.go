@@ -222,6 +222,7 @@ func (n *Engine) renderFrame(frameFunc DrawFrameFunc) bool {
 
 	if time.Since(n.windowTitleUpdate) >= 100*time.Millisecond {
 		n.window.SetTitle(fmt.Sprintf("%s [%.2ffps]", n.windowTitle, framerate))
+		//n.window.SetTitle(n.windowTitle)
 		n.windowTitleUpdate = time.Now()
 	}
 
@@ -335,6 +336,22 @@ func roundMillis(d time.Duration) time.Duration {
 // Should usually not be required/accessed by the user.
 func (n *Engine) Window() *glfw.Window {
 	return n.window
+}
+
+// WindowSize returns the window's size in the last frame.
+func (n *Engine) WindowSize() vmath.Vec2i {
+	return n.InteractionSystem.WindowSize()
+}
+
+// WindowTitle returns the current window title.
+func (n *Engine) WindowTitle() string {
+	return n.windowTitle
+}
+
+// SetWindowTitle changes the current window title.
+func (n *Engine) SetWindowTitle(title string) {
+	n.windowTitle = title
+	n.windowTitleUpdate = time.Time{} // force update
 }
 
 // RenderThread returns the underlying render thread.

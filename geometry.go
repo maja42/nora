@@ -24,6 +24,16 @@ func NewGeometry(vertexCount int, vertices []float32, indices []uint16, primitiv
 	return g
 }
 
+// Empty returns true if the geometry does not contain any data.
+func (g *Geometry) Empty() bool {
+	return g.vertexCount == 0
+}
+
+// VertexCount returns the current number of vertices.
+func (g *Geometry) VertexCount() int {
+	return g.vertexCount
+}
+
 // Set replaces the existing geometry with new data.
 func (g *Geometry) Set(vertexCount int, vertices []float32, indices []uint16, primitiveType PrimitiveType, vertexAttributes []string, bufferLayout BufferLayout) {
 	AssertValidGeometry("", vertexCount, vertices, indices, primitiveType, vertexAttributes)
@@ -33,6 +43,18 @@ func (g *Geometry) Set(vertexCount int, vertices []float32, indices []uint16, pr
 	g.primitiveType = primitiveType
 	g.vertexAttributes = vertexAttributes
 	g.bufferLayout = bufferLayout
+}
+
+// Checks if there's still enough space to append the given number of vertices.
+func (g *Geometry) CanAppendVertexCount(vertexCount int) bool {
+	var degenerateTris = 0
+	if g.vertexCount > 0 && g.primitiveType == gl.TRIANGLE_STRIP {
+		degenerateTris = 2 // two degenerate triangles needed
+		if g.vertexCount%2 != 0 {
+			degenerateTris++ // another degenerate for correct winding order needed
+		}
+	}
+	return g.vertexCount+degenerateTris+vertexCount <= 0xFFFF
 }
 
 // Append merges new geometry at the end of the current one.
@@ -45,7 +67,7 @@ func (g *Geometry) Append(vertexCount int, vertices []float32, indices []uint16,
 
 	assert.True(g.primitiveType == primitiveType, "Incompatible primitive type %s<=>%s", g.primitiveType, primitiveType)
 	assert.True(equalStringSlice(g.vertexAttributes, vertexAttributes), "Incompatible vertex attributes: %v <> %v", g.vertexAttributes, vertexAttributes)
-	assert.True(g.vertexCount+vertexCount+2 <= 0xFFFF, "Resulting geometry is not indexable by uint16") // +2 for possible degenerate triangles
+	assert.True(g.CanAppendVertexCount(vertexCount), "Resulting geometry is not indexable by uint16")
 	assert.True((g.indices != nil) == (indices != nil), "Incompatible indexed-drawing property")
 
 	// Support could be added for some of the following cases:
@@ -197,7 +219,7 @@ func AssertValidGeometry(sProgKey ShaderProgKey, vertexCount int, vertices []flo
 	for _, attr := range vertexAttributes {
 		typ, ok := sProg.attributeTypes[attr]
 		expectedVertexSize += int(vaTypePropertyMapping[typ].components)
-		assert.True(ok, "Shader %q does not support vertex attribute %s", attr)
+		assert.True(ok, "Shader %q does not support vertex attribute %s", sProgKey, attr)
 	}
 	// Check missing attributes
 	if vertexCount > 0 && len(sProg.attributeTypes) > len(vertexAttributes) {

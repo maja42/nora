@@ -7,6 +7,7 @@ import (
 	"github.com/maja42/nora/builtin/shader"
 	"github.com/maja42/nora/color"
 	"github.com/maja42/vmath"
+	"github.com/maja42/vmath/mathi"
 )
 
 type LineStrip2D struct {
@@ -121,7 +122,7 @@ func (m *LineStrip2D) RemovePoint(idx int) bool {
 // RemoveLastPoints removes a last n points from the line.
 // Returns the number of points actually removed.
 func (m *LineStrip2D) RemoveLastPoints(count int) int {
-	count = vmath.Mini(count, len(m.points))
+	count = mathi.Min(count, len(m.points))
 	m.points = m.points[:len(m.points)-count]
 	m.dirty = true
 	return count

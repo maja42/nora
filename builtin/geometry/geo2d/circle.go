@@ -7,6 +7,7 @@ import (
 	"github.com/maja42/nora"
 	"github.com/maja42/nora/assert"
 	"github.com/maja42/vmath"
+	"github.com/maja42/vmath/math32"
 )
 
 // Circle creates a circle with the given number of edges.
@@ -53,8 +54,8 @@ func EllipsisSector(position vmath.Vec2f, radius vmath.Vec2f, segments int, from
 			backAngle--
 		}
 		copy(vertices[i*2:], []float32{
-			position[0] + vmath.Sin(angle)*radius[0],
-			position[1] + vmath.Cos(angle)*radius[1],
+			position[0] + math32.Sin(angle)*radius[0],
+			position[1] + math32.Cos(angle)*radius[1],
 		})
 	}
 	return nora.NewGeometry(points, vertices, nil, gl.TRIANGLE_STRIP, []string{"position"}, nora.InterleavedBuffer)
@@ -90,8 +91,8 @@ func EllipsisSegment(position vmath.Vec2f, radius vmath.Vec2f, segments int, fro
 			backAngle--
 		}
 		copy(vertices[targetIdx*2:], []float32{
-			position[0] + vmath.Sin(angle)*radius[0],
-			position[1] + vmath.Cos(angle)*radius[1],
+			position[0] + math32.Sin(angle)*radius[0],
+			position[1] + math32.Cos(angle)*radius[1],
 		})
 	}
 	return nora.NewGeometry(points, vertices, nil, gl.TRIANGLE_STRIP, []string{"position"}, nora.InterleavedBuffer)

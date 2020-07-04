@@ -7,6 +7,7 @@ import (
 	"github.com/maja42/nora"
 	"github.com/maja42/nora/assert"
 	"github.com/maja42/vmath"
+	"github.com/maja42/vmath/math32"
 )
 
 // Ring creates a ring with the given number of edges.
@@ -42,13 +43,13 @@ func EllipticalRingSegment(position vmath.Vec2f, outerRadius, innerRadius vmath.
 		angle := fromRad + float32(i)*stride
 		// outer:
 		copy(vertices[i*4:], []float32{
-			position[0] + vmath.Sin(angle)*outerRadius[0],
-			position[1] + vmath.Cos(angle)*outerRadius[1],
+			position[0] + math32.Sin(angle)*outerRadius[0],
+			position[1] + math32.Cos(angle)*outerRadius[1],
 		})
 		// inner:
 		copy(vertices[i*4+2:], []float32{
-			position[0] + vmath.Sin(angle)*innerRadius[0],
-			position[1] + vmath.Cos(angle)*innerRadius[1],
+			position[0] + math32.Sin(angle)*innerRadius[0],
+			position[1] + math32.Cos(angle)*innerRadius[1],
 		})
 	}
 	return nora.NewGeometry(vtxCount, vertices, nil, gl.TRIANGLE_STRIP, []string{"position"}, nora.InterleavedBuffer)

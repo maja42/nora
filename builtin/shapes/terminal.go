@@ -24,7 +24,7 @@ type Terminal struct {
 
 func NewTerminal(font *nora.Font, size vmath.Vec2i, lineSpacing float32) *Terminal {
 	if !font.Monospace {
-		logrus.Warn("No monospace font (%v)", font)
+		logrus.Warnf("No monospace font (%v)", font)
 	}
 
 	mat := nora.NewMaterial(shader.COL_TEX_2D)

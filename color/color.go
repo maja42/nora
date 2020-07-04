@@ -7,6 +7,7 @@ import (
 	"math"
 
 	"github.com/maja42/vmath"
+	"github.com/maja42/vmath/math32"
 )
 
 var fMaxUint16 = float32(math.MaxUint16)
@@ -49,12 +50,22 @@ func (c Color) WithBrightness(luminosity float32) Color {
 	return HSL(h, s, luminosity)
 }
 
+// Vec3f returns the color's RGB components as a vector.
+func (c Color) Vec3f() vmath.Vec3f {
+	return vmath.Vec3f{c.R, c.G, c.B}
+}
+
+// Vec4f returns the color's components as a vector.
+func (c Color) Vec4f() vmath.Vec4f {
+	return vmath.Vec4f{c.R, c.G, c.B, c.A}
+}
+
 // HSL converts the RGB color into hue, saturation, luminosity (0-1).
 func (c Color) HSL() (float32, float32, float32) {
 	// Based on: https://github.com/gerow/go-color
 
-	max := vmath.Max(vmath.Max(c.R, c.G), c.B)
-	min := vmath.Min(vmath.Min(c.R, c.G), c.B)
+	max := math32.Max(math32.Max(c.R, c.G), c.B)
+	min := math32.Min(math32.Min(c.R, c.G), c.B)
 
 	// luminosity is the average of the max and min rgb color intensities.
 	luminosity := (max + min) / 2
@@ -255,4 +266,50 @@ func Gray(brightness float32) Color {
 		B: brightness,
 		A: 1,
 	}
+}
+
+// FromVec3 converts the vector into a color with 100% opacity.
+func FromVec3(vec vmath.Vec3f) Color {
+	return Color{
+		R: vec[0],
+		G: vec[1],
+		B: vec[2],
+		A: 1,
+	}
+}
+
+// FromVec4 converts the vector into a color.
+func FromVec4(vec vmath.Vec4f) Color {
+	return Color{
+		R: vec[0],
+		G: vec[1],
+		B: vec[2],
+		A: vec[3],
+	}
+}
+
+// InterpolateRGBA performs a linear interpolation between two colors.
+// This is done by interpolating the individual RGBA components.
+// The parameter t should be in range [0, 1].
+func InterpolateRGBA(c1, c2 Color, t float32) Color {
+	return Color{
+		R: (c2.R-c1.R)*t + c1.R,
+		G: (c2.G-c1.G)*t + c1.G,
+		B: (c2.B-c1.B)*t + c1.B,
+		A: (c2.A-c1.A)*t + c1.A,
+	}
+}
+
+// InterpolateHSLA performs a linear interpolation between two colors.
+// This is done by interpolating hue, saturation, luminosity and alpha components.
+// The parameter t should be in range [0, 1].
+func InterpolateHSLA(c1, c2 Color, t float32) Color {
+	h1, s1, l1 := c1.HSL()
+	h2, s2, l2 := c2.HSL()
+	return HSLA(
+		(h2-h1)*t+h1,
+		(s2-s1)*t+s1,
+		(l2-l1)*t+l1,
+		(c2.A-c1.A)*t+c1.A,
+	)
 }

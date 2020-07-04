@@ -87,7 +87,7 @@ func (s *TextureStore) StartHotReloading(ctx context.Context) error {
 		}
 	})
 	if err != nil {
-		logrus.Warn("Failed to perform texture hot-reloading: %s", err)
+		logrus.Warnf("Failed to perform texture hot-reloading: %s", err)
 	}
 	return nil
 }

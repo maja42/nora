@@ -12,9 +12,5 @@ void main(void) {
     vec4 texel = texture2D(sampler, vec2(vTexCoord.s, -vTexCoord.t));
     texel = texel * color;
 
-    texel.r = 1;
-    texel.g = 1;
-    texel.b = 1;
-
     gl_FragColor = texel;
 }

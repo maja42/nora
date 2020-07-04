@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/maja42/glfw"
-	"github.com/maja42/vmath"
+	"github.com/maja42/vmath/math32"
 
 	"github.com/maja42/nora"
 	"github.com/maja42/nora/builtin/shader"
@@ -80,8 +80,8 @@ func run() error {
 			xs := tri.GetScale().X() * 5
 			tri.UniformScale(1 + ((rand.Float32() - 0.5) * sz / xs))
 			scale := tri.GetScale()
-			scale[0] = vmath.Max(scale[0], 0.03)
-			scale[1] = vmath.Max(scale[1], 0.03)
+			scale[0] = math32.Max(scale[0], 0.03)
+			scale[1] = math32.Max(scale[1], 0.03)
 			tri.SetScale(scale)
 
 			tri.Draw(renderState)

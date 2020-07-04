@@ -181,7 +181,7 @@ func (i *InteractionSystem) RemoveAll() {
 	i.mouseButtonEventFuncs = make(map[CallbackID]OnMouseButtonEventFunc)
 }
 
-// WindowSize returns the current size of the opened window
+// WindowSize returns the size of the opened window from the last frame.
 func (i *InteractionSystem) WindowSize() vmath.Vec2i {
 	return i.windowSize
 }
